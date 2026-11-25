@@ -13,11 +13,12 @@ This repository contains **Milestone 1** of the product: a polished, local, runn
 1. You read an AI-generated answer in the main column.
 2. You **select a word, sentence, or passage inside that answer**.
 3. A small **“Ask about this”** control appears right there.
-4. You ask a question; the answer is attached **to that exact passage**, not dropped at the bottom of the chat.
-5. You can select text **inside that new answer** and branch again — nested as deep as you like.
-6. You **collapse** branches and return to the parent context without losing your place.
+4. You ask a question; the answer is attached **to that exact passage as an inline comment** — not dropped at the bottom of the chat.
+5. The selected text becomes a **highlight with a comment marker at its end**. The reply shows in a small **popover thread** anchored to that marker.
+6. When you're done, the thread **collapses back into the comment icon** at the end of the highlight. Click the icon to reopen it.
+7. You can select text **inside that reply** and branch again — nested as deep as you like, each level its own inline comment. Deep threads open in a **focus view** with breadcrumbs.
 
-That is the whole invention. Everything else (documents, voice, diagrams, search) is planned for later milestones and is deliberately *not* in this build.
+That is the whole invention: a comment thread lives *inside the same response*, anchored to the passage it explains. Everything else (documents, voice, diagrams, search) is planned for later milestones and is deliberately *not* in this build.
 
 ---
 
@@ -115,10 +116,10 @@ After `npm run dev`:
 2. Read the sample answer about vaccine/immune memory. ✅
 3. **Select** a sentence in the answer (e.g. *“When immune cells encounter this material…”*). ✅
 4. Click **“Ask about this”**, type *“Explain this simply”*, and submit. ✅
-5. A branch appears **directly beneath the selected sentence** with the excerpt, your question, and a labeled mock answer. ✅
-6. **Select text inside that answer** and branch again. ✅
-7. Explore **3+ levels**; indentation caps so text never shrinks to nothing; use **Focus** for deep branches. ✅
-8. **Collapse** a branch (its nested children hide) and **Expand** it again. ✅
+5. The selected sentence becomes a **highlight**, with a **comment marker at its end**. The reply opens as a **popover thread** right there, showing your question + a labeled mock answer. ✅
+6. **Click the comment icon** to collapse the thread back to just the icon; click again to reopen. ✅
+7. **Select text inside that reply** and branch again — nested inline comments, each its own highlight + marker. ✅
+8. Explore **3+ levels**; each thread is a fixed-width popover, so the reading column never shrinks. Use **Focus** for deep branches. ✅
 9. Use the **Focus** view breadcrumbs to navigate up and **“← Conversation”** to return to the parent. ✅
 10. **Reload the page** — your branches, anchors, and collapse state are still there. ✅
 11. (Trust check) The engine validates anchors on load; a tampered source text surfaces a *“source passage could not be found”* recoverable state rather than attaching to the wrong text. ✅
@@ -148,8 +149,7 @@ src/
     AppShell.tsx          # app bar, brand, theme toggle, reset
     ConversationView.tsx  # the reading column
     MessageView.tsx       # user + assistant messages
-    BranchView.tsx        # one branch: excerpt, question, answer, children
-    SelectableText.tsx    # renders immutable Content + registers for selection
+    BranchableText.tsx    # renders Content as selectable text with inline highlight + comment marker + popover thread (recursive for nesting)
     SelectionProvider.tsx # owns live selection, renders overlay, creates branches
     SelectionOverlay.tsx  # floating toolbar + composer
     FocusView.tsx         # breadcrumbed full-width branch view

@@ -77,6 +77,14 @@ export function getContentById(state: PersistedState, contentId: ContentId): Con
   return container.kind === 'message' ? container.message.content : container.branch.answer;
 }
 
+/** All branches anchored to a given Content, in document order. */
+export function branchesForContent(state: PersistedState, contentId: ContentId): Branch[] {
+  return Object.keys(state.branches)
+    .map((id) => state.branches[id])
+    .filter((b) => b.parentContentId === contentId)
+    .sort((a, b) => a.anchor.start - b.anchor.start);
+}
+
 /**
  * Create a branch anchored to a selection inside `parentContentId`.
  * Pure: returns a new state and never mutates the input. Rejects invalid input

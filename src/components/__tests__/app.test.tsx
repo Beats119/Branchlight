@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import App from '../../App';
 import { SelectionToolbar, BranchComposer } from '../../components/SelectionOverlay';
 import { BranchlightStore, MemoryStorage } from '../../domain/store';
@@ -49,17 +49,18 @@ describe('App — reading view', () => {
     expect(screen.getByText('And nested?')).toBeInTheDocument();
   });
 
-  it('collapses a branch, hiding its nested children, then reopens', () => {
+  it('collapses a branch thread (hiding nested replies), then reopens', () => {
     const store = new BranchlightStore(new MemoryStorage(), buildStateWithBranches());
     render(<App store={store} />);
-    const parentBranch = screen.getByText('What is this about?').closest('.branch') as HTMLElement;
-    expect(within(parentBranch).getByText('And nested?')).toBeInTheDocument();
+    // The comment marker toggles the inline thread for its branch.
+    const parentMarker = screen.getByRole('button', { name: /comment: what is this about/i });
+    // Open by default: the nested reply is visible inside the parent thread.
+    expect(screen.getByText('And nested?')).toBeInTheDocument();
 
-    // The parent branch contains a nested child branch, so scope to the parent's own control.
-    fireEvent.click(within(parentBranch).getAllByRole('button', { name: /collapse/i })[0]);
+    fireEvent.click(parentMarker);
     expect(screen.queryByText('And nested?')).not.toBeInTheDocument();
 
-    fireEvent.click(within(parentBranch).getByRole('button', { name: /expand/i }));
+    fireEvent.click(screen.getByRole('button', { name: /comment: what is this about/i }));
     expect(screen.getByText('And nested?')).toBeInTheDocument();
   });
 
@@ -72,7 +73,7 @@ describe('App — reading view', () => {
 
     const store = new BranchlightStore(new MemoryStorage(), corrupted);
     render(<App store={store} />);
-    expect(screen.getByText(/source passage could not be found/i)).toBeInTheDocument();
+    expect(screen.getByText(/source passage not found/i)).toBeInTheDocument();
   });
 });
 

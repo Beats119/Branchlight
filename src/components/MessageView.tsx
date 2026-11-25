@@ -1,6 +1,5 @@
 import type { Message } from '../domain/types';
-import { SelectableText } from './SelectableText';
-import { BranchView } from './BranchView';
+import { BranchableText } from './BranchableText';
 
 export function UserMessage({ message }: { message: Message }) {
   return (
@@ -19,14 +18,7 @@ export function AssistantMessage({ message }: { message: Message }) {
         ✦
       </div>
       <div className="message__body">
-        <SelectableText content={message.content} className="prose" />
-        {message.branchIds.length > 0 && (
-          <div className="branch-list">
-            {message.branchIds.map((bid) => (
-              <BranchView key={bid} branchId={bid} depth={0} />
-            ))}
-          </div>
-        )}
+        <BranchableText contentId={message.content.id} className="prose" />
       </div>
     </article>
   );

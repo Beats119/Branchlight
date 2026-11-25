@@ -1,11 +1,11 @@
 import { useStore, useBranchlightState } from '../context';
 import { getBranchPath } from '../domain/branching';
-import { BranchView } from './BranchView';
+import { BranchableText } from './BranchableText';
 import { Breadcrumbs } from './Breadcrumbs';
 
 /**
  * Full-width, breadcrumbed view for a single branch and its subtree. Used when
- * inline nesting gets deep, so the main reading column never shrinks to nothing.
+ * the inline popovers get deep — the breadcrumb lets you jump to any ancestor.
  */
 export function FocusView({ branchId }: { branchId: string }) {
   const store = useStore();
@@ -23,7 +23,10 @@ export function FocusView({ branchId }: { branchId: string }) {
         onExit={() => store.setFocus(null)}
       />
       <div className="focus-view__main">
-        <BranchView branchId={branchId} depth={0} />
+        <div className="focus-view__question">
+          <span className="thread__qlabel">You asked</span> {branch.question}
+        </div>
+        <BranchableText contentId={branch.answer.id} className="prose" />
       </div>
     </div>
   );
