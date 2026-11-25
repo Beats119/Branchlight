@@ -46,20 +46,21 @@ export function BranchComposer({
   selection,
   onSubmit,
   onCancel,
+  submitting: externalSubmitting,
 }: {
   selection: SelectionInfo;
   onSubmit: (question: string) => void;
   onCancel: () => void;
+  submitting?: boolean;
 }) {
   const [question, setQuestion] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const pos = clampPosition(selection.rect, 360);
+  const busy = externalSubmitting ?? false;
 
   function submit() {
     const q = question.trim();
-    if (!q || submitting) return;
-    setSubmitting(true);
+    if (!q || busy) return;
     onSubmit(q);
   }
 
@@ -96,9 +97,9 @@ export function BranchComposer({
           type="button"
           className="btn btn--primary"
           onClick={submit}
-          disabled={!question.trim() || submitting}
+          disabled={!question.trim() || busy}
         >
-          {submitting ? 'Adding…' : 'Add branch'}
+          {busy ? 'Thinking…' : 'Add branch'}
         </button>
       </div>
     </div>
@@ -108,18 +109,20 @@ export function BranchComposer({
 export function SelectionOverlay({
   selection,
   composing,
+  submitting,
   onAsk,
   onCancel,
   onSubmit,
 }: {
   selection: SelectionInfo;
   composing: boolean;
+  submitting?: boolean;
   onAsk: () => void;
   onCancel: () => void;
   onSubmit: (question: string) => void;
 }) {
   if (composing) {
-    return <BranchComposer selection={selection} onSubmit={onSubmit} onCancel={onCancel} />;
+    return <BranchComposer selection={selection} onSubmit={onSubmit} onCancel={onCancel} submitting={submitting} />;
   }
   return <SelectionToolbar selection={selection} onAsk={onAsk} />;
 }

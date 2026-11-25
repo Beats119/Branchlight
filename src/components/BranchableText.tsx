@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useStore, useBranchlightState, useSelection } from '../context';
+import { useSettingsState } from '../settings/SettingsContext';
 import { getContentById, branchesForContent } from '../domain/branching';
+import { isTTSAvailable, speak } from '../audio/tts';
 import type { Branch } from '../domain/types';
 
 function CommentIcon() {
@@ -104,6 +106,8 @@ function Highlight({ branch }: { branch: Branch }) {
 
 function ThreadPopover({ branch }: { branch: Branch }) {
   const anchorOk = branch.anchor.status === 'valid';
+  const settings = useSettingsState();
+  const canSpeak = isTTSAvailable() && settings.speechEnabled;
   return (
     <div className="thread" role="dialog" aria-label={`Answer to: ${branch.question}`}>
       <div className="thread__question">
@@ -117,7 +121,24 @@ function ThreadPopover({ branch }: { branch: Branch }) {
       )}
       <div className="thread__answer">
         <BranchableText contentId={branch.answer.id} className="prose--branch" />
-        {branch.mock && <span className="mock-badge">Demo answer · mock</span>}
+        <div className="thread__meta">
+          {branch.mock ? (
+            <span className="mock-badge">Demo answer · mock</span>
+          ) : (
+            <span className="mock-badge mock-badge--real">AI answer</span>
+          )}
+          {canSpeak && (
+            <button
+              type="button"
+              className="icon-btn"
+              data-ui="true"
+              aria-label="Read answer aloud"
+              onClick={() => speak(branch.answer.text)}
+            >
+              🔊 Speak
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

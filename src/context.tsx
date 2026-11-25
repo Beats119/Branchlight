@@ -26,7 +26,7 @@ export function useBranchlightState(): PersistedState {
   return useSyncExternalStore(store.subscribe, store.getSnapshot);
 }
 
-function getStorage(): StorageLike {
+export function getStorage(): StorageLike {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const probe = '__bl_probe__';

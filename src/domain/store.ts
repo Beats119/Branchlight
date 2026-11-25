@@ -4,6 +4,8 @@ import {
   toggleCollapse,
   setFocus,
   validateAllAnchors,
+  createDocumentConversation,
+  setActiveConversation,
   type CreateBranchInput,
   type CreateBranchResult,
 } from './branching';
@@ -103,6 +105,16 @@ export class BranchlightStore {
 
   setFocus(branchId: BranchId | null): void {
     this.set(setFocus(this.state, branchId));
+  }
+
+  /** Add an uploaded document as a new conversation and switch to it. */
+  createDocumentConversation(name: string, pages: string[]): void {
+    this.set(createDocumentConversation(this.state, name, pages));
+  }
+
+  /** Switch the active conversation (Sources switcher). */
+  setActiveConversation(conversationId: string): void {
+    this.set(setActiveConversation(this.state, conversationId));
   }
 
   /** Re-seed the demo (used by the "Reset demo" control). */

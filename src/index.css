@@ -351,7 +351,6 @@ body {
 
 .mock-badge {
   display: inline-block;
-  margin-top: 8px;
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -359,6 +358,40 @@ body {
   background: var(--accent-weak);
   border-radius: 999px;
   padding: 3px 9px;
+}
+.mock-badge--real {
+  color: #0a7d4b;
+  background: rgba(10, 125, 75, 0.12);
+}
+[data-theme="dark"] .mock-badge--real {
+  color: #5fe0a0;
+  background: rgba(95, 224, 160, 0.14);
+}
+
+.thread__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.icon-btn {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.icon-btn:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }
 
 /* ----------------------------- Selection toolbar ----------------------------- */
@@ -579,6 +612,135 @@ body {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ----------------------------- Sources bar ----------------------------- */
+
+.sources {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+.chip--active {
+  background: var(--accent-weak);
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+
+/* ----------------------------- Settings modal ----------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 10, 20, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: fade-in 0.15s var(--ease);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.modal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal__head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.modal__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal__note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+.field > span {
+  color: var(--text-muted);
+}
+.field input,
+.field select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+}
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.field--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.field--row input {
+  width: auto;
+}
+.modal__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
 }
 
 /* ----------------------------- Small screens ----------------------------- */

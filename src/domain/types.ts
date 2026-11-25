@@ -81,7 +81,11 @@ export interface Conversation {
 
 export interface Workspace {
   id: WorkspaceId;
+  /** The currently displayed conversation (a reference into `conversations`). */
   conversation: Conversation;
+  /** All conversations: the sample chat plus any uploaded documents. */
+  conversations: Record<ConversationId, Conversation>;
+  activeConversationId: ConversationId;
 }
 
 export interface UiState {

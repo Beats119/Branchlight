@@ -4,7 +4,7 @@ import App from '../../App';
 import { SelectionToolbar, BranchComposer } from '../../components/SelectionOverlay';
 import { BranchlightStore, MemoryStorage } from '../../domain/store';
 import { seedState } from '../../domain/sampleData';
-import { createBranch } from '../../domain/branching';
+import { createBranch, createDocumentConversation } from '../../domain/branching';
 import { makeInput, ASSISTANT_CONTENT_ID } from '../../domain/__tests__/helpers';
 import type { PersistedState } from '../../domain/types';
 import type { SelectionInfo } from '../../selection/useTextSelection';
@@ -69,7 +69,7 @@ describe('App — reading view', () => {
     if (!r1.ok) throw new Error('branch failed');
     const corrupted = JSON.parse(JSON.stringify(r1.state)) as PersistedState;
     // Simulate the source text being edited after the branch existed.
-    corrupted.workspace.conversation.messages[1].content.text = 'COMPLETELY DIFFERENT SOURCE';
+    corrupted.workspace.conversations['conv_1'].messages[1].content.text = 'COMPLETELY DIFFERENT SOURCE';
 
     const store = new BranchlightStore(new MemoryStorage(), corrupted);
     render(<App store={store} />);
@@ -92,6 +92,29 @@ describe('App — persistence across restart', () => {
     const second = new BranchlightStore(storage);
     render(<App store={second} />);
     expect(screen.getByText('Persisted question?')).toBeInTheDocument();
+  });
+});
+
+describe('App — documents / sources', () => {
+  beforeEach(() => cleanup());
+
+  it('shows uploaded documents in the sources bar and switches to them', () => {
+    const state = createDocumentConversation(
+      seedState(),
+      'My Notes.txt',
+      ['Alpha beta gamma. Delta epsilon zeta.'],
+    );
+    const store = new BranchlightStore(new MemoryStorage(), state);
+    render(<App store={store} />);
+
+    // Both the sample chat and the uploaded document appear as source tabs.
+    expect(screen.getByRole('tab', { name: /immune memory/i })).toBeInTheDocument();
+    const docTab = screen.getByRole('tab', { name: 'My Notes.txt' });
+    expect(docTab).toBeInTheDocument();
+
+    // Switch to the document; its text becomes the reading view.
+    fireEvent.click(docTab);
+    expect(screen.getByText(/Alpha beta gamma/)).toBeInTheDocument();
   });
 });
 

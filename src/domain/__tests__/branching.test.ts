@@ -192,7 +192,8 @@ describe('anchor validation on reload', () => {
     if (!res.ok) throw new Error('expected ok');
     const corrupted: PersistedState = JSON.parse(JSON.stringify(res.state));
     // Simulate an edit/corruption of the source text after the branch existed.
-    corrupted.workspace.conversation.messages[1].content.text = 'COMPLETELY DIFFERENT TEXT';
+    // (Mutate the canonical copy held in workspace.conversations.)
+    corrupted.workspace.conversations['conv_1'].messages[1].content.text = 'COMPLETELY DIFFERENT TEXT';
     const { state, brokeIds } = validateAllAnchors(corrupted);
     expect(brokeIds).toContain(res.branchId);
     expect(state.branches[res.branchId].anchor.status).toBe('unavailable');

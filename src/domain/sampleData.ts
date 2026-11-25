@@ -25,30 +25,34 @@ const ASSISTANT_ANSWER_TEXT = [
 ].join('\n\n');
 
 export function seedState(): PersistedState {
+  const sampleConversation: import('./types').Conversation = {
+    id: 'conv_1',
+    title: 'How vaccines build immune memory',
+    messages: [
+      {
+        id: USER_QUESTION_ID,
+        role: 'user',
+        content: { id: USER_QUESTION_ID + '_c', version: 1, text: USER_QUESTION_TEXT },
+        branchIds: [],
+        createdAt: 1,
+      },
+      {
+        id: ASSISTANT_MESSAGE_ID,
+        role: 'assistant',
+        content: { id: ASSISTANT_CONTENT_ID, version: 1, text: ASSISTANT_ANSWER_TEXT },
+        branchIds: [],
+        createdAt: 2,
+      },
+    ],
+  };
+
   return {
     version: SEED_VERSION,
     workspace: {
       id: 'ws_1',
-      conversation: {
-        id: 'conv_1',
-        title: 'How vaccines build immune memory',
-        messages: [
-          {
-            id: USER_QUESTION_ID,
-            role: 'user',
-            content: { id: USER_QUESTION_ID + '_c', version: 1, text: USER_QUESTION_TEXT },
-            branchIds: [],
-            createdAt: 1,
-          },
-          {
-            id: ASSISTANT_MESSAGE_ID,
-            role: 'assistant',
-            content: { id: ASSISTANT_CONTENT_ID, version: 1, text: ASSISTANT_ANSWER_TEXT },
-            branchIds: [],
-            createdAt: 2,
-          },
-        ],
-      },
+      conversation: sampleConversation,
+      conversations: { conv_1: sampleConversation },
+      activeConversationId: 'conv_1',
     },
     branches: {},
     ui: { focusedBranchId: null },

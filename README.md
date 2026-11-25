@@ -4,7 +4,7 @@
 
 Branchlight is a reading companion where **any passage inside an AI explanation can become its own in-place conversation** — and any passage inside *that* conversation can become another. Instead of a linear chat that dumps answers at the bottom, Branchlight lets you branch directly from the sentence you don't understand, collapse the digression when you're done, and keep reading.
 
-This repository contains **Milestone 1** of the product: a polished, local, runnable prototype powered entirely by **mock responses**. No API key, no GPU, no backend, no network.
+This repository contains the product through **Milestone 2**: a polished, local, runnable prototype whose core is the in-place branching interaction, now extended with **real, local features** you can test immediately — uploading documents (PDF/text) and branching from them, browser-native read-aloud, and a bring-your-own-key (BYOK) adapter so answers can come from a real LLM the moment you paste your key. No paid service is introduced; external calls use *your* provider with *your* key.
 
 ---
 
@@ -22,21 +22,20 @@ That is the whole invention: a comment thread lives *inside the same response*, 
 
 ---
 
-## What this milestone includes
+## What's implemented (Milestones 1–2)
 
 - A polished, reading-focused UI (light + dark themes, full keyboard operability, reduced-motion support).
-- A sample conversation with a substantial, multi-paragraph AI answer.
-- Select-to-ask branching anchored to the exact selected text.
-- **Nested branching** (verified to 5+ levels with no hard-coded maximum).
-- Collapse / expand and a **focus view** with breadcrumbs for deep branches.
-- A mock responder that is clearly labeled as a demo answer.
-- **Local persistence** of branches, anchors, and collapse/focus state across restarts.
+- The **inline comment-thread** interaction: highlight a passage → a comment marker appears at its end → the reply opens as a popover thread there → collapse it back to the icon. Nested as deep as you like.
+- **Documents (real, key-free):** upload a `.txt` / `.md` or **PDF**; it becomes a source you can read and branch from, just like the sample answer. Switch sources with the Sources bar.
+- **Real LLM via BYOK (real, with your key):** an OpenAI / Anthropic adapter. Enter your key in **Settings** (stored only in this browser's local storage, never in the conversation); answers then come from the provider, with mock fallback if the call fails.
+- **Voice (real, key-free):** a **Speak** button uses the browser's native text-to-speech to read any thread answer aloud.
+- **Local persistence** of branches, anchors, documents, collapse/focus state, and settings across restarts.
 - **Anchor validation on load** so a branch can never silently point at the wrong passage.
-- A test suite (domain + component) built test-first around the behavior.
+- A test suite (domain + component) built around the behavior — 60 tests passing.
 
-### Explicitly out of scope (per the milestone)
+### Explicitly out of scope (deferred milestones)
 
-No PDF parsing, no real LLM calls, no voice, no web search, no accounts, no cloud sync, no diagram generation. The architecture leaves clean extension points for these, but adds no speculative infrastructure.
+- Web search & citations (needs a search-API key), structured/AI-generated diagrams, accounts, cloud sync, managed hosting, and an Electron desktop shell (the domain layer is Electron-ready, but a desktop GUI can't be verified in this build environment). The architecture leaves clean extension points for each.
 
 ---
 
@@ -48,6 +47,9 @@ No PDF parsing, no real LLM calls, no voice, no web search, no accounts, no clou
 | Build / dev | **Vite 5** | Fast, simple, standard. |
 | Tests | **Vitest 2 + Testing Library (jsdom)** | Fast unit + component testing in one runner. |
 | Persistence | **`StorageLike` repository** (localStorage in browser, in-memory in tests) | Decouples the domain from any backend; can migrate to SQLite / Electron `safeStorage` later. |
+| Documents | **pdfjs-dist** (lazy-loaded) + native FileReader for txt/md | Extracts per-page text so any passage becomes branchable; worker is code-split. |
+| Real LLM | **Provider adapter** (`src/domain/providers`) | OpenAI- and Anthropic-shaped requests behind one interface; BYOK, mock fallback. |
+| Voice | **Web Speech API** (`speechSynthesis`) | Browser-native read-aloud, no key, no network. |
 | Styling | **Hand-written CSS design tokens** | Full control over the calm, reading-focused aesthetic; no heavy UI dependency. |
 
 ### Decision: browser-first instead of Electron (deviation, documented)
@@ -126,6 +128,12 @@ After `npm run dev`:
 12. Resize the window — the layout stays usable; theme toggle works. ✅
 13. Tab/Enter through the composer and controls — everything is keyboard reachable with visible focus rings. ✅
 
+### Real features to try (no paid service introduced)
+
+- **Documents:** click **Upload**, choose a `.txt`/`.md`/PDF. It appears as a new source in the Sources bar; click it and branch from any passage in the document exactly as from an answer.
+- **Real AI answers:** open **Settings**, pick a provider, paste your API key + model, Save. Now your "Ask" calls that provider; the answer is badged **AI answer** (not *mock*). Leave the key empty and it gracefully falls back to the mock.
+- **Voice:** with read-aloud enabled in Settings, each thread has a **🔊 Speak** button that reads the answer using your browser's built-in speech (no key, no network).
+
 ---
 
 ## Architecture
@@ -146,14 +154,20 @@ src/
     offset.ts             # DOM (node,offset) -> UTF-16 char offset within root
     useTextSelection.ts   # centralized native-selection tracker -> SelectionInfo
   components/
-    AppShell.tsx          # app bar, brand, theme toggle, reset
+    AppShell.tsx          # app bar, brand, upload, settings, theme toggle, reset
     ConversationView.tsx  # the reading column
     MessageView.tsx       # user + assistant messages
     BranchableText.tsx    # renders Content as selectable text with inline highlight + comment marker + popover thread (recursive for nesting)
-    SelectionProvider.tsx # owns live selection, renders overlay, creates branches
+    SelectionProvider.tsx # owns live selection, renders overlay, creates branches (mock or real)
     SelectionOverlay.tsx  # floating toolbar + composer
     FocusView.tsx         # breadcrumbed full-width branch view
     Breadcrumbs.tsx
+    SourcesBar.tsx        # switch between sample chat and uploaded documents
+    SettingsPanel.tsx     # BYOK provider config + speech toggle (local only)
+  settings/               # SettingsStore (localStorage) + React context
+  audio/tts.ts           # browser-native read-aloud
+  documents/pdf.ts        # lazy-loaded PDF text extraction (pdfjs-dist)
+  domain/providers/       # provider types, OpenAI/Anthropic adapters, client
     __tests__/app.test.tsx
   context.tsx             # Store / Theme / Selection React contexts + hooks
   App.tsx
@@ -190,8 +204,11 @@ The first milestone is intentionally minimal so the core interaction is proven. 
 
 - **Desktop shell:** shipped as a browser app, not an Electron binary (see decision above). Native GUI/Playwright E2E could not run in the build environment.
 - **Native selection** is verified by primitives + manual run, not by an automated browser test in this environment.
-- **Persistence** uses `localStorage` (per-origin). It is not encrypted; real key storage would move to OS credential storage in a later milestone.
-- **Single conversation / single document** in the demo. Multi-doc workspaces are future scope.
+- **Real LLM requires your key:** the BYOK adapter calls your provider from the browser; answers are only "real" once you add a key in Settings. Calls fail closed to the mock on any error.
+- **PDF text extraction** relies on `pdfjs-dist` (worker code-split). Scanned/image-only PDFs won't yield selectable text. Very large PDFs are extracted page-by-page on upload (UI blocks during read).
+- **Voice** uses the browser's `speechSynthesis`; availability and voice quality vary by browser/OS.
+- **Persistence** uses `localStorage` (per-origin). The API key is stored there (not in the conversation), not in OS credential storage; that's a later-hardening step.
+- **Single active document** at a time in the reading view; all uploaded documents remain in the Sources bar and persist across restarts.
 - Generated mock answers are generic; they exist to make the branching interaction tangible, not to teach immunology.
 
 ---

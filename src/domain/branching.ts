@@ -7,6 +7,8 @@ import type {
   Message,
   SelectionAnchor,
   BranchPathNode,
+  Conversation,
+  ConversationId,
 } from './types';
 import { newId } from './ids';
 import { validateAnchor } from './anchoring';
@@ -49,17 +51,24 @@ interface BranchContainer {
 }
 type Container = MessageContainer | BranchContainer;
 
+function allConversations(state: PersistedState): Conversation[] {
+  return Object.values(state.workspace.conversations);
+}
+
 /**
  * Resolve which container owns a given Content id. A Content is either a
- * message body or a branch answer — both are anchorable.
+ * message body or a branch answer — both are anchorable. Searches every
+ * conversation (the sample chat and any uploaded documents).
  */
 export function findContainer(
   state: PersistedState,
   contentId: ContentId,
 ): Container | null {
-  for (const message of state.workspace.conversation.messages) {
-    if (message.content.id === contentId) {
-      return { kind: 'message', message };
+  for (const conversation of allConversations(state)) {
+    for (const message of conversation.messages) {
+      if (message.content.id === contentId) {
+        return { kind: 'message', message };
+      }
     }
   }
   for (const id of Object.keys(state.branches)) {
@@ -186,18 +195,74 @@ export function validateAllAnchors(state: PersistedState): {
   brokeIds: BranchId[];
 } {
   const next = clone(state);
+  // Build a complete id -> text map across all conversations and branch answers.
+  const contents = new Map<ContentId, string>();
+  for (const conversation of allConversations(next)) {
+    for (const message of conversation.messages) {
+      contents.set(message.content.id, message.content.text);
+    }
+  }
+  for (const id of Object.keys(next.branches)) {
+    contents.set(next.branches[id].answer.id, next.branches[id].answer.text);
+  }
+
   const brokeIds: BranchId[] = [];
   for (const id of Object.keys(next.branches)) {
     const branch = next.branches[id];
-    const parent = getContentById(next, branch.parentContentId);
-    if (!parent) {
+    const parentText = contents.get(branch.parentContentId);
+    if (parentText === undefined) {
       branch.anchor.status = 'unavailable';
       brokeIds.push(id);
       continue;
     }
-    const status = validateAnchor(parent.text, branch.anchor);
+    const status = validateAnchor(parentText, branch.anchor);
     branch.anchor.status = status;
     if (status === 'unavailable') brokeIds.push(id);
   }
   return { state: next, brokeIds };
+}
+
+/** Create a conversation from an uploaded document and make it active. */
+export function createDocumentConversation(
+  state: PersistedState,
+  name: string,
+  pages: string[],
+): PersistedState {
+  const next = clone(state);
+  const id = newId('conv');
+  const messages: Message[] = [
+    {
+      id: newId('msg'),
+      role: 'user',
+      content: { id: newId('c'), version: 1, text: `Document: ${name}` },
+      branchIds: [],
+      createdAt: Date.now(),
+    },
+  ];
+  pages
+    .filter((p) => p.trim().length > 0)
+    .forEach((page, i) => {
+      messages.push({
+        id: newId('msg'),
+        role: 'assistant',
+        content: { id: newId('c'), version: 1, text: page },
+        branchIds: [],
+        createdAt: Date.now() + i,
+      });
+    });
+  const conversation: Conversation = { id, title: name, messages };
+  next.workspace.conversations[id] = conversation;
+  next.workspace.activeConversationId = id;
+  next.workspace.conversation = conversation;
+  return next;
+}
+
+/** Switch the active conversation (used by the Sources switcher). */
+export function setActiveConversation(state: PersistedState, conversationId: ConversationId): PersistedState {
+  const next = clone(state);
+  const conversation = next.workspace.conversations[conversationId];
+  if (!conversation) return state;
+  next.workspace.activeConversationId = conversationId;
+  next.workspace.conversation = conversation;
+  return next;
 }

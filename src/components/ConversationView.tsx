@@ -10,7 +10,7 @@ export function ConversationView() {
       <header className="conversation__header">
         <h1 className="conversation__title">{conversation.title}</h1>
         <p className="conversation__hint">
-          Select any sentence in the answer below, then choose <strong>“Ask about this”</strong>. The
+          Select any passage in the text below, then choose <strong>“Ask about this”</strong>. The
           answer appears right where you are — and you can branch again from inside it.
         </p>
       </header>
