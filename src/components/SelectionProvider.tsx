@@ -28,6 +28,13 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     returnTo.current?.focus({ preventScroll: true });
   }, [setSelection, clearDomSelection]);
 
+  const beginDraft = useCallback(() => {
+    if (!selection) return;
+    returnTo.current = document.querySelector(`[data-content-id="${selection.contentId}"]`);
+    submitted.current = false;
+    setDraft(selection);
+  }, [selection]);
+
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') cancel();
@@ -39,8 +46,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
         !draft
       ) {
         e.preventDefault();
-        setDraft(selection);
-        submitted.current = false;
+        beginDraft();
       }
     };
     const outside = (e: PointerEvent) => {
@@ -53,7 +59,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('keydown', key);
       document.removeEventListener('pointerdown', outside);
     };
-  }, [selection, draft, cancel, setSelection]);
+  }, [selection, draft, cancel, setSelection, beginDraft]);
 
   const choosePassage = useCallback(
     (id: string) => {
@@ -108,13 +114,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
         <SelectionOverlay
           selection={(draft || selection)!}
           composing={!!draft}
-          onAsk={() => {
-            returnTo.current = document.querySelector(
-              `[data-content-id="${selection!.contentId}"]`,
-            );
-            submitted.current = false;
-            setDraft(selection);
-          }}
+          onAsk={beginDraft}
           onCancel={cancel}
           onSubmit={submit}
           error={error}

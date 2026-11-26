@@ -4,8 +4,9 @@
   "include": [
     "vite.config.ts",
     "playwright.config.ts",
+    "playwright.desktop.config.ts",
     "scripts/**/*.ts",
     "tests/**/*.ts",
-    "desktop/security.test.ts"
+    "desktop/**/*.test.ts"
   ]
 }

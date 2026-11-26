@@ -108,7 +108,7 @@ export function BranchComposer({
         <button
           className="btn btn--primary"
           onClick={submit}
-          disabled={!question.trim() || (submitting && !error)}
+          disabled={!question.trim() || submitting || !!error}
         >
           {submitting && !error ? 'Adding…' : 'Add branch'}
           <Icon name="arrow" />

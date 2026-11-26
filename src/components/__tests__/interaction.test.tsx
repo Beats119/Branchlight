@@ -140,3 +140,15 @@ it('moves keyboard focus to the new context heading after focus navigation', () 
   fireEvent.click(screen.getByRole('button', { name: '← Conversation' }));
   expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
 });
+
+it('returns to the selected answer when the keyboard shortcut composer is cancelled', () => {
+  const { container } = render(<App store={new BranchlightStore(new MemoryStorage())} />);
+  const answer = container.querySelector<HTMLElement>(
+    `[data-content-id="${ASSISTANT_CONTENT_ID}"]`,
+  )!;
+  select(answer);
+  fireEvent.keyDown(document, { key: 'B', ctrlKey: true, shiftKey: true });
+  expect(screen.getByRole('textbox')).toHaveFocus();
+  fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+  expect(answer).toHaveFocus();
+});

@@ -18,7 +18,9 @@
     "build:desktop": "tsc -p desktop/tsconfig.json",
     "desktop": "npm run build && npm run build:desktop && electron .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:desktop": "npm run build && npm run build:desktop && playwright test --config=playwright.desktop.config.ts",
+    "test:desktop:list": "playwright test --config=playwright.desktop.config.ts --list"
   },
   "dependencies": {
     "react": "18.3.1",
