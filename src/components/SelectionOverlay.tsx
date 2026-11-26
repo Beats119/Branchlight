@@ -1,22 +1,9 @@
 import { useRef, useState } from 'react';
 import type { SelectionInfo } from '../selection/useTextSelection';
+import { Modal } from './ui/Modal';
+import { Icon } from './ui/Icon';
 
-function clampPosition(rect: SelectionInfo['rect'], width: number) {
-  const above = rect.top > 96;
-  const margin = 12;
-  const maxLeft = Math.max(margin, window.innerWidth - width - margin);
-  const left = Math.min(Math.max(rect.left, margin), maxLeft);
-  const top = above ? rect.top - 12 : rect.bottom + 12;
-  const transform = above ? 'translateY(-100%)' : 'none';
-  return { left, top, transform, placeAbove: above };
-}
-
-function truncate(text: string, max: number): string {
-  const t = text.trim().replace(/\s+/g, ' ');
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-}
-
-/** Floating pill shown right after a valid selection. */
+/** A short toolbar sits below the range, or above it when near the viewport edge. */
 export function SelectionToolbar({
   selection,
   onAsk,
@@ -24,102 +11,131 @@ export function SelectionToolbar({
   selection: SelectionInfo;
   onAsk: () => void;
 }) {
-  const pos = clampPosition(selection.rect, 280);
+  const width = Math.min(285, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(selection.rect.left, window.innerWidth - width - 12));
+  const below = selection.rect.bottom + 10;
+  const preferred = below + 54 > window.innerHeight - 12 ? selection.rect.top - 54 : below;
+  const top = Math.max(12, Math.min(preferred, window.innerHeight - 62));
   return (
     <div
       data-ui="true"
       className="sel-toolbar"
-      style={{ left: pos.left, top: pos.top, transform: pos.transform }}
+      style={{ left, top, width }}
       role="toolbar"
       aria-label="Selection actions"
     >
-      <span className="sel-toolbar__preview">“{truncate(selection.exactText, 60)}”</span>
-      <button type="button" className="sel-toolbar__ask" onClick={onAsk} onMouseDown={(e) => e.preventDefault()}>
-        Ask about this
+      <button className="sel-toolbar__ask" onClick={onAsk} onMouseDown={(e) => e.preventDefault()}>
+        <Icon name="branch" /> Ask about this <span aria-hidden>↗</span>
       </button>
+      <kbd title="Control or Command + Shift + B">⌘ ⇧ B</kbd>
     </div>
   );
 }
 
-/** Inline composer for the user's question about the selection. */
 export function BranchComposer({
   selection,
   onSubmit,
   onCancel,
+  error,
 }: {
   selection: SelectionInfo;
   onSubmit: (question: string) => void;
   onCancel: () => void;
+  error?: string | null;
 }) {
   const [question, setQuestion] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const taRef = useRef<HTMLTextAreaElement | null>(null);
-  const pos = clampPosition(selection.rect, 360);
-
+  const lock = useRef(false);
   function submit() {
     const q = question.trim();
-    if (!q || submitting) return;
+    if (!q || lock.current) return;
+    lock.current = true;
     setSubmitting(true);
     onSubmit(q);
   }
-
   return (
-    <div
-      data-ui="true"
-      className="composer"
-      style={{ left: pos.left, top: pos.top, transform: pos.transform }}
-      role="dialog"
-      aria-label="Ask a question about the selection"
-    >
-      <div className="composer__excerpt">
-        <span className="composer__label">Selected</span>
-        <span className="composer__quote">“{truncate(selection.exactText, 120)}”</span>
+    <Modal label="Ask a question about the selection" onClose={onCancel} className="composer">
+      <div className="composer__heading">
+        <span className="eyebrow">
+          <Icon name="branch" /> FOLLOW YOUR CURIOSITY
+        </span>
+        <button className="icon-only" aria-label="Close composer" onClick={onCancel}>
+          <Icon name="close" />
+        </button>
       </div>
+      <h2>Let’s go a little deeper.</h2>
+      <div className="composer__excerpt">
+        <span className="composer__label">BRANCHING FROM</span>
+        <blockquote>“{selection.exactText}”</blockquote>
+      </div>
+      <label className="input-label" htmlFor="branch-question">
+        Your question
+      </label>
       <textarea
-        ref={taRef}
+        id="branch-question"
+        data-autofocus
         className="composer__input"
         placeholder="Ask a follow-up about this passage…"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
         onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
-          if (e.key === 'Escape') onCancel();
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+          }
         }}
         rows={3}
-        autoFocus
       />
+      {!question && (
+        <div className="question-suggestions">
+          {['Explain this simply', 'Give me an example', 'Why does this matter?'].map((q) => (
+            <button key={q} onClick={() => setQuestion(q)}>
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="error-text">
+          {error}
+        </p>
+      )}
       <div className="composer__actions">
-        <button type="button" className="btn btn--ghost" onClick={onCancel} onMouseDown={(e) => e.preventDefault()}>
+        <span className="composer__note">A new thread. Same train of thought.</span>
+        <button className="btn btn--ghost" onClick={onCancel}>
           Cancel
         </button>
         <button
-          type="button"
           className="btn btn--primary"
           onClick={submit}
-          disabled={!question.trim() || submitting}
+          disabled={!question.trim() || (submitting && !error)}
         >
-          {submitting ? 'Adding…' : 'Add branch'}
+          {submitting && !error ? 'Adding…' : 'Add branch'}
+          <Icon name="arrow" />
         </button>
       </div>
-    </div>
+      <div className="composer__footnote">Local demo response · no AI service is connected</div>
+    </Modal>
   );
 }
-
 export function SelectionOverlay({
   selection,
   composing,
   onAsk,
   onCancel,
   onSubmit,
+  error,
 }: {
   selection: SelectionInfo;
   composing: boolean;
   onAsk: () => void;
   onCancel: () => void;
   onSubmit: (question: string) => void;
+  error?: string | null;
 }) {
-  if (composing) {
-    return <BranchComposer selection={selection} onSubmit={onSubmit} onCancel={onCancel} />;
-  }
-  return <SelectionToolbar selection={selection} onAsk={onAsk} />;
+  return composing ? (
+    <BranchComposer selection={selection} onSubmit={onSubmit} onCancel={onCancel} error={error} />
+  ) : (
+    <SelectionToolbar selection={selection} onAsk={onAsk} />
+  );
 }

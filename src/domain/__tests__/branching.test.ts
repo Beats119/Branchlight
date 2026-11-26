@@ -17,10 +17,7 @@ const base = (): PersistedState => seedState();
 
 describe('createBranch — validation', () => {
   it('rejects an empty question', () => {
-    const res = createBranch(
-      base(),
-      makeInput(base(), ASSISTANT_CONTENT_ID, 0, 5, '   '),
-    );
+    const res = createBranch(base(), makeInput(base(), ASSISTANT_CONTENT_ID, 0, 5, '   '));
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe('empty-question');
   });
@@ -65,7 +62,10 @@ describe('createBranch — validation', () => {
 describe('createBranch — happy path', () => {
   it('creates a branch, attaches it to the message, and keeps state immutable', () => {
     const initial = base();
-    const res = createBranch(initial, makeInput(initial, ASSISTANT_CONTENT_ID, 0, 9, 'What is this?'));
+    const res = createBranch(
+      initial,
+      makeInput(initial, ASSISTANT_CONTENT_ID, 0, 9, 'What is this?'),
+    );
     expect(res.ok).toBe(true);
     if (!res.ok) return;
 

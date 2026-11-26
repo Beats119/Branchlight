@@ -8,6 +8,7 @@ import {
   type CreateBranchResult,
 } from './branching';
 import { seedState } from './sampleData';
+import { isPersistedState } from './validation';
 
 /** Minimal storage abstraction so the domain never depends on a concrete backend. */
 export interface StorageLike {
@@ -42,9 +43,23 @@ export class MemoryStorage implements StorageLike {
  */
 export class BranchlightStore {
   private state: PersistedState;
+  private storageError: string | null = null;
+  private protectedStorage = false;
+  private originalData: string | null = null;
+
+  /** A recovery export must preserve the original blob, even if it cannot load. */
+  exportData = (): string =>
+    this.protectedStorage && this.originalData !== null
+      ? this.originalData
+      : JSON.stringify(this.state, null, 2);
+
+  getStorageError = (): string | null => this.storageError;
   private listeners = new Set<() => void>();
 
-  constructor(private storage: StorageLike, initial?: PersistedState) {
+  constructor(
+    private storage: StorageLike,
+    initial?: PersistedState,
+  ) {
     // Always validate anchors on construction so a branch can never silently
     // point at the wrong passage, whether the state came from storage or was
     // supplied directly (e.g. a rehydrated/seed state).
@@ -54,14 +69,17 @@ export class BranchlightStore {
   private load(): PersistedState {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersistedState;
-        // Validate anchors on every load so a branch can never silently point
-        // at the wrong passage after a reload.
+      this.originalData = raw;
+      if (raw !== null) {
+        const parsed: unknown = JSON.parse(raw);
+        if (!isPersistedState(parsed)) throw new Error('Unsupported workspace');
         return validateAllAnchors(parsed).state;
       }
     } catch {
-      /* fall through to seed */
+      this.storageError =
+        'Your workspace could not be restored. The original data is untouched. This session is temporary; reset only if you want to replace it.';
+      this.protectedStorage = true;
+      return seedState();
     }
     const seeded = seedState();
     this.save(seeded);
@@ -69,10 +87,13 @@ export class BranchlightStore {
   }
 
   private save(state: PersistedState = this.state): void {
+    if (this.protectedStorage) return;
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
+      this.storageError = null;
     } catch {
-      /* persistence is best-effort in the prototype */
+      this.storageError =
+        'Changes are not saved. Local storage may be full or unavailable. Keep this window open; export your workspace before closing.';
     }
   }
 
@@ -107,6 +128,7 @@ export class BranchlightStore {
 
   /** Re-seed the demo (used by the "Reset demo" control). */
   reset(): void {
+    this.protectedStorage = false;
     this.set(seedState());
   }
 }

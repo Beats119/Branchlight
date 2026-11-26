@@ -24,7 +24,7 @@ const CONTEXT = 24;
 
 /** True when the selection endpoint lives inside our own UI (so we must ignore it). */
 function isWithinUI(node: Node | null): boolean {
-  let el: Element | null = node instanceof Element ? node : node?.parentElement ?? null;
+  let el: Element | null = node instanceof Element ? node : (node?.parentElement ?? null);
   while (el) {
     const tag = el.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || el.hasAttribute('data-ui')) return true;
@@ -49,6 +49,7 @@ function clearDomSelection(): void {
 export function useTextSelection() {
   const registry = useRef(new Map<string, { text: string; el: HTMLElement }>());
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
+  const [issue, setIssue] = useState<string | null>(null);
 
   const register = useCallback((id: string, text: string, el: HTMLElement | null) => {
     if (el) registry.current.set(id, { text, el });
@@ -60,6 +61,7 @@ export function useTextSelection() {
 
   useEffect(() => {
     function compute(): void {
+      setIssue(null);
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
         setSelection(null);
@@ -94,6 +96,16 @@ export function useTextSelection() {
         return;
       }
 
+      // Both endpoints must belong to the exact same immutable answer.
+      const endElement =
+        range.endContainer instanceof Element
+          ? range.endContainer
+          : range.endContainer.parentElement;
+      if (endElement?.closest('[data-content-id]') !== el) {
+        setIssue('Select a passage within one answer at a time.');
+        setSelection(null);
+        return;
+      }
       const start = getOffsetWithin(el, range.startContainer, range.startOffset);
       const end = getOffsetWithin(el, range.endContainer, range.endOffset);
       if (start >= end) {
@@ -124,15 +136,19 @@ export function useTextSelection() {
       });
     }
 
+    window.addEventListener('scroll', compute, true);
+    window.addEventListener('resize', compute);
     document.addEventListener('mouseup', compute);
     document.addEventListener('keyup', compute);
     document.addEventListener('selectionchange', compute);
     return () => {
+      window.removeEventListener('scroll', compute, true);
+      window.removeEventListener('resize', compute);
       document.removeEventListener('mouseup', compute);
       document.removeEventListener('keyup', compute);
       document.removeEventListener('selectionchange', compute);
     };
   }, []);
 
-  return { selection, setSelection, register, unregister, clearDomSelection };
+  return { selection, setSelection, register, unregister, clearDomSelection, issue };
 }

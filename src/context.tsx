@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { PersistedState } from './domain/types';
-import { BranchlightStore, MemoryStorage, type StorageLike } from './domain/store';
+import { BranchlightStore, type StorageLike } from './domain/store';
 
 /* ----------------------------- Store context ----------------------------- */
 
@@ -37,14 +37,23 @@ function getStorage(): StorageLike {
   } catch {
     /* ignore */
   }
-  return new MemoryStorage();
+  return {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error('Storage unavailable');
+    },
+    removeItem: () => {},
+  };
 }
 
 function getInitialTheme(): 'light' | 'dark' {
   try {
     const stored = window.localStorage.getItem('branchlight:theme');
     if (stored === 'light' || stored === 'dark') return stored;
-    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    if (
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    ) {
       return 'dark';
     }
   } catch {
@@ -72,6 +81,7 @@ export function useTheme(): ThemeValue {
 export interface SelectionRegistry {
   register: (id: string, text: string, el: HTMLElement | null) => void;
   unregister: (id: string) => void;
+  choosePassage: (id: string) => void;
 }
 export const SelectionContext = createContext<SelectionRegistry | null>(null);
 
@@ -104,6 +114,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, [theme]);
-  const value = useMemo<ThemeValue>(() => ({ theme, toggle: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')) }), [theme]);
+  const value = useMemo<ThemeValue>(
+    () => ({ theme, toggle: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')) }),
+    [theme],
+  );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
