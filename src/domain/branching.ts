@@ -25,10 +25,7 @@ export interface CreateBranchInput {
 }
 
 export type CreateBranchError =
-  | 'empty-question'
-  | 'bad-range'
-  | 'parent-not-found'
-  | 'invalid-anchor';
+  'empty-question' | 'bad-range' | 'parent-not-found' | 'invalid-anchor';
 
 export type CreateBranchResult =
   | { ok: true; state: PersistedState; branch: Branch; branchId: BranchId }
@@ -53,10 +50,7 @@ type Container = MessageContainer | BranchContainer;
  * Resolve which container owns a given Content id. A Content is either a
  * message body or a branch answer — both are anchorable.
  */
-export function findContainer(
-  state: PersistedState,
-  contentId: ContentId,
-): Container | null {
+export function findContainer(state: PersistedState, contentId: ContentId): Container | null {
   for (const message of state.workspace.conversation.messages) {
     if (message.content.id === contentId) {
       return { kind: 'message', message };
@@ -82,13 +76,15 @@ export function getContentById(state: PersistedState, contentId: ContentId): Con
  * Pure: returns a new state and never mutates the input. Rejects invalid input
  * with a typed error so the UI can react precisely.
  */
-export function createBranch(
-  state: PersistedState,
-  input: CreateBranchInput,
-): CreateBranchResult {
+export function createBranch(state: PersistedState, input: CreateBranchInput): CreateBranchResult {
   const question = (input.question ?? '').trim();
   if (!question) return { ok: false, error: 'empty-question' };
-  if (!Number.isInteger(input.start) || !Number.isInteger(input.end) || input.start < 0 || input.end <= input.start) {
+  if (
+    !Number.isInteger(input.start) ||
+    !Number.isInteger(input.end) ||
+    input.start < 0 ||
+    input.end <= input.start
+  ) {
     return { ok: false, error: 'bad-range' };
   }
 
@@ -182,12 +178,30 @@ export function validateAllAnchors(state: PersistedState): {
   for (const id of Object.keys(next.branches)) {
     const branch = next.branches[id];
     const parent = getContentById(next, branch.parentContentId);
-    if (!parent) {
+    if (
+      !parent ||
+      parent.id !== branch.anchor.parentContentId ||
+      parent.version !== branch.anchor.parentVersion
+    ) {
       branch.anchor.status = 'unavailable';
       brokeIds.push(id);
       continue;
     }
-    const status = validateAnchor(parent.text, branch.anchor);
+    const owner = findContainer(next, branch.parentContentId);
+    const links =
+      owner?.kind === 'message' ? owner.message.branchIds : owner?.branch.childBranchIds;
+    const otherOwners = [
+      ...next.workspace.conversation.messages
+        .filter((m) => m.content.id !== branch.parentContentId)
+        .flatMap((m) => m.branchIds),
+      ...Object.values(next.branches)
+        .filter((b) => b.answer.id !== branch.parentContentId)
+        .flatMap((b) => b.childBranchIds),
+    ];
+    const status =
+      links?.includes(id) && !otherOwners.includes(id)
+        ? validateAnchor(parent.text, branch.anchor)
+        : 'unavailable';
     branch.anchor.status = status;
     if (status === 'unavailable') brokeIds.push(id);
   }

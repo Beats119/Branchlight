@@ -15,7 +15,9 @@ describe('BranchlightStore (memory-backed)', () => {
   it('persists a created branch to storage', () => {
     const storage = new MemoryStorage();
     const store = new BranchlightStore(storage);
-    const res = store.createBranch(makeInput(store.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Q1'));
+    const res = store.createBranch(
+      makeInput(store.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Q1'),
+    );
     expect(res.ok).toBe(true);
     expect(storage.getItem(STORAGE_KEY)).not.toBeNull();
 
@@ -26,7 +28,9 @@ describe('BranchlightStore (memory-backed)', () => {
   it('reloads persisted branches from the same storage', () => {
     const storage = new MemoryStorage();
     const first = new BranchlightStore(storage);
-    const res = first.createBranch(makeInput(first.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Q1'));
+    const res = first.createBranch(
+      makeInput(first.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Q1'),
+    );
     expect(res.ok).toBe(true);
 
     const second = new BranchlightStore(storage);
@@ -55,6 +59,8 @@ describe('BranchlightStore (memory-backed)', () => {
 
   it('can be constructed from an explicit initial state', () => {
     const store = new BranchlightStore(new MemoryStorage(), seedState());
-    expect(store.getSnapshot().workspace.conversation.title).toBe('How vaccines build immune memory');
+    expect(store.getSnapshot().workspace.conversation.title).toBe(
+      'How vaccines build immune memory',
+    );
   });
 });

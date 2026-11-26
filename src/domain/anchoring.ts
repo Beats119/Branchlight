@@ -34,6 +34,7 @@ export function buildAnchor(
  * state instead of attaching a branch to the wrong passage.
  */
 export function validateAnchor(parentText: string, anchor: SelectionAnchor): AnchorStatus {
+  if (!anchor.exactText.trim()) return 'unavailable';
   if (!Number.isInteger(anchor.start) || !Number.isInteger(anchor.end)) return 'unavailable';
   if (anchor.start < 0 || anchor.end > parentText.length) return 'unavailable';
   if (anchor.start >= anchor.end) return 'unavailable';

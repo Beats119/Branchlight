@@ -9,9 +9,15 @@
 
 export function mockAnswer(selectedText: string, question: string): string {
   const q = question.trim().toLowerCase();
-  const snippet = selectedText.trim();
+  const text = selectedText.trim();
+  const snippet = text.length > 100 ? `${text.slice(0, 97).trimEnd()}…` : text;
 
-  if (q.includes('simple') || q.includes('eli5') || q.includes('explain like')) {
+  if (
+    q.includes('simple') ||
+    q.includes('simply') ||
+    q.includes('eli5') ||
+    q.includes('explain like')
+  ) {
     return (
       `In plain terms: "${snippet}" means the body keeps a record of invaders it has ` +
       `met before, so the next time it recognises them quickly and reacts faster. ` +
@@ -45,6 +51,10 @@ export function mockAnswer(selectedText: string, question: string): string {
       `passage sits on the "remembered" side of that line. ` +
       `(Demo answer — generated locally, not by a real model.)`
     );
+  }
+
+  if (/memory cells?|b cells?|t cells?/i.test(`${q} ${snippet}`)) {
+    return 'Memory cells are long-lived B cells and T cells that remain after an immune response. Rather than storing a picture of a germ, each cell carries receptors that respond to particular molecular shapes.\n\nWhen a matching antigen appears again, these cells can help mount a faster, more targeted response. Memory B cells can develop into antibody-producing cells; memory T cells can coordinate a response or help remove infected cells. This is a simplified, scripted example—not medical advice.';
   }
 
   return (

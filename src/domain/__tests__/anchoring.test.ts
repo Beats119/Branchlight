@@ -43,7 +43,9 @@ describe('validateAnchor', () => {
   it('returns unavailable when the selected text no longer matches', () => {
     const c = makeContent('The immune system recognizes foreign antigens.');
     const anchor = buildAnchor(c, 32, 41);
-    expect(validateAnchor('The text was completely replaced by an edit.', anchor)).toBe('unavailable');
+    expect(validateAnchor('The text was completely replaced by an edit.', anchor)).toBe(
+      'unavailable',
+    );
   });
 
   it('returns unavailable for a reversed or empty range', () => {

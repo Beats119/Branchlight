@@ -1,78 +1,115 @@
 import { useStore, useBranchlightState } from '../context';
+import { findContainer, getBranchDepth } from '../domain/branching';
 import { SelectableText } from './SelectableText';
+import { Icon } from './ui/Icon';
 
-function truncate(text: string, max: number): string {
-  const t = text.trim().replace(/\s+/g, ' ');
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-}
-
-/**
- * Renders one branch: the selected excerpt, the question, the (mock) answer,
- * and any child branches. The branch is attached directly beneath its parent
- * passage so the conversation stays in reading flow rather than moving to the
- * bottom of a chat.
- */
 export function BranchView({ branchId, depth }: { branchId: string; depth: number }) {
   const store = useStore();
   const state = useBranchlightState();
   const branch = state.branches[branchId];
   if (!branch) return null;
-
   const anchorOk = branch.anchor.status === 'valid';
-  const capped = Math.min(depth, 5);
-  const indent = 16 + capped * 20;
-
+  const openSource = () => {
+    const parent = findContainer(state, branch.parentContentId);
+    store.setFocus(parent?.kind === 'branch' ? parent.branch.id : null);
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-content-id="${branch.parentContentId}"]`,
+      );
+      const mark = el?.querySelector<HTMLElement>(`[data-anchor-start="${branch.anchor.start}"]`);
+      (mark || el)?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+      el?.focus({ preventScroll: true });
+    });
+  };
+  if (depth >= 2)
+    return (
+      <div className="branch-gateway" id={`branch-${branchId}`} tabIndex={-1}>
+        <Icon name="branch" />
+        <div>
+          <span className="eyebrow">
+            KEEP EXPLORING · LEVEL {getBranchDepth(state, branchId) + 1}
+          </span>
+          <strong>{branch.question}</strong>
+        </div>
+        <button
+          className="btn btn--ghost"
+          onClick={() => store.setFocus(branchId)}
+          aria-label={`Continue in focus view: ${branch.question}`}
+        >
+          Continue in focus view <Icon name="arrow" />
+        </button>
+      </div>
+    );
   return (
-    <div className="branch" data-depth={depth} style={{ marginLeft: indent }}>
+    <section
+      className="branch"
+      data-depth={depth}
+      id={`branch-${branchId}`}
+      tabIndex={-1}
+      aria-label={`Branch: ${branch.question}`}
+    >
       <div className="branch__bar">
-        <span className="branch__excerpt" title={branch.anchor.exactText}>
-          “{truncate(branch.anchor.exactText, 90)}”
+        <span className="branch__level">
+          <Icon name="branch" size={15} /> BRANCH{' '}
+          {String(getBranchDepth(state, branchId) + 1).padStart(2, '0')}
         </span>
         <div className="branch__actions">
           <button
-            type="button"
             className="icon-btn"
             onClick={() => store.setFocus(branchId)}
             aria-label="Open this branch in focus view"
           >
-            Focus
+            <Icon name="focus" size={14} /> Focus
           </button>
           <button
-            type="button"
             className="icon-btn"
             onClick={() => store.toggleCollapse(branchId)}
             aria-expanded={!branch.collapsed}
           >
-            {branch.collapsed ? 'Expand' : 'Collapse'}
+            {branch.collapsed ? '+' : '−'} {branch.collapsed ? 'Expand' : 'Collapse'}
           </button>
         </div>
       </div>
-
+      <button
+        className="branch__source"
+        onClick={openSource}
+        disabled={!anchorOk}
+        title="Return to this exact passage"
+      >
+        <span className="branch__source-line" />
+        <span>“{branch.anchor.exactText}”</span>
+        <span className="branch__source-arrow" aria-hidden>
+          ↖
+        </span>
+      </button>
       <div className="branch__question">
-        <span className="branch__qlabel">You asked</span>
-        <span className="branch__qtext">{branch.question}</span>
+        <span className="branch__qlabel">YOU ASKED</span>
+        <h3>{branch.question}</h3>
       </div>
-
       {!anchorOk && (
         <div className="branch__warning" role="alert">
-          <span aria-hidden>⚠</span> This branch’s source passage could not be found. The answer is
-          kept, but its link to the original text is unavailable.
+          Anchor unavailable. This branch’s source passage could not be found. Your question and
+          answer are kept; the original link is disabled.
         </div>
       )}
-
       {!branch.collapsed && (
         <div className="branch__answer">
+          {branch.mock && (
+            <span className="mock-badge">
+              <span />
+              Demo answer · mock
+            </span>
+          )}
           <SelectableText content={branch.answer} className="prose prose--branch" />
-          {branch.mock && <span className="mock-badge">Demo answer · mock</span>}
           {branch.childBranchIds.length > 0 && (
             <div className="branch-list">
-              {branch.childBranchIds.map((cid) => (
-                <BranchView key={cid} branchId={cid} depth={depth + 1} />
+              {branch.childBranchIds.map((id) => (
+                <BranchView key={id} branchId={id} depth={depth + 1} />
               ))}
             </div>
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

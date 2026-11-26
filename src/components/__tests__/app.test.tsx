@@ -11,7 +11,10 @@ import type { SelectionInfo } from '../../selection/useTextSelection';
 
 function buildStateWithBranches(): PersistedState {
   let state = seedState();
-  const r1 = createBranch(state, makeInput(state, ASSISTANT_CONTENT_ID, 0, 9, 'What is this about?'));
+  const r1 = createBranch(
+    state,
+    makeInput(state, ASSISTANT_CONTENT_ID, 0, 9, 'What is this about?'),
+  );
   if (!r1.ok) throw new Error('r1 failed');
   state = r1.state;
   const r2 = createBranch(state, makeInput(state, r1.branch.answer.id, 0, 4, 'And nested?'));
@@ -42,25 +45,27 @@ describe('App — reading view', () => {
     const store = new BranchlightStore(new MemoryStorage(), buildStateWithBranches());
     render(<App store={store} />);
     // Parent branch
-    expect(screen.getByText('What is this about?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'What is this about?' })).toBeInTheDocument();
     // Mock answer badge (one per branch; there are two branches here)
     expect(screen.getAllByText(/Demo answer · mock/i).length).toBeGreaterThanOrEqual(1);
     // Nested child branch
-    expect(screen.getByText('And nested?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'And nested?' })).toBeInTheDocument();
   });
 
   it('collapses a branch, hiding its nested children, then reopens', () => {
     const store = new BranchlightStore(new MemoryStorage(), buildStateWithBranches());
     render(<App store={store} />);
-    const parentBranch = screen.getByText('What is this about?').closest('.branch') as HTMLElement;
+    const parentBranch = screen
+      .getByRole('heading', { name: 'What is this about?' })
+      .closest('.branch') as HTMLElement;
     expect(within(parentBranch).getByText('And nested?')).toBeInTheDocument();
 
     // The parent branch contains a nested child branch, so scope to the parent's own control.
     fireEvent.click(within(parentBranch).getAllByRole('button', { name: /collapse/i })[0]);
-    expect(screen.queryByText('And nested?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'And nested?' })).not.toBeInTheDocument();
 
     fireEvent.click(within(parentBranch).getByRole('button', { name: /expand/i }));
-    expect(screen.getByText('And nested?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'And nested?' })).toBeInTheDocument();
   });
 
   it('shows a recoverable warning when an anchor no longer matches its source', () => {
@@ -85,12 +90,14 @@ describe('App — persistence across restart', () => {
       makeInput(first.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Persisted question?'),
     );
     expect(res.ok).toBe(true);
-    first.createBranch(makeInput(first.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Persisted question?'));
+    first.createBranch(
+      makeInput(first.getSnapshot(), ASSISTANT_CONTENT_ID, 0, 9, 'Persisted question?'),
+    );
 
     cleanup();
     const second = new BranchlightStore(storage);
     render(<App store={second} />);
-    expect(screen.getByText('Persisted question?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Persisted question?' })).toBeInTheDocument();
   });
 });
 
@@ -121,5 +128,21 @@ describe('SelectionOverlay pieces', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(onSubmit2).not.toHaveBeenCalled();
     expect(onCancel).toHaveBeenCalled();
+  });
+});
+
+describe('toolbar placement', () => {
+  it('moves above a passage when there is not enough room below it', () => {
+    const nearBottom = {
+      ...fakeSelection,
+      rect: {
+        ...fakeSelection.rect,
+        top: window.innerHeight - 60,
+        bottom: window.innerHeight - 30,
+      },
+    };
+    render(<SelectionToolbar selection={nearBottom} onAsk={() => {}} />);
+    const toolbar = screen.getByRole('toolbar');
+    expect(parseFloat(toolbar.style.top) + 44).toBeLessThanOrEqual(nearBottom.rect.top);
   });
 });

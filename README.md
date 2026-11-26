@@ -1,201 +1,169 @@
-# Branchlight
+# branchlight.
 
-> **Follow every question.**
+### Follow every question.
 
-Branchlight is a reading companion where **any passage inside an AI explanation can become its own in-place conversation** — and any passage inside *that* conversation can become another. Instead of a linear chat that dumps answers at the bottom, Branchlight lets you branch directly from the sentence you don't understand, collapse the digression when you're done, and keep reading.
+An answer is a starting point, not the end of a conversation. **Select a passage inside a demo explanation, ask about it, and follow the answer in a connected branch. Then branch from that answer, too.**
 
-This repository contains **Milestone 1** of the product: a polished, local, runnable prototype powered entirely by **mock responses**. No API key, no GPU, no backend, no network.
+![Branchlight’s local reading workspace](docs/branchlight.png)
 
----
+## Status — milestone 1, local mock prototype
 
-## The core interaction
+The **browser interaction is implemented and tested**. An Electron desktop shell is included and type-checked, with unit-tested security configuration and asset routing. **Native Electron launch/restart is not verified in this environment**: its runtime download is blocked, and the Linux sandbox has no desktop display. This is not a signed installer or a production release, and the full desktop acceptance gate remains open.
 
-1. You read an AI-generated answer in the main column.
-2. You **select a word, sentence, or passage inside that answer**.
-3. A small **“Ask about this”** control appears right there.
-4. You ask a question; the answer is attached **to that exact passage**, not dropped at the bottom of the chat.
-5. You can select text **inside that new answer** and branch again — nested as deep as you like.
-6. You **collapse** branches and return to the parent context without losing your place.
+No API key, account, GPU, database server, or paid service is required. Installation downloads free dependencies; normal use after installation is local. All answers are **scripted mock content**, not live AI or medical advice.
 
-That is the whole invention. Everything else (documents, voice, diagrams, search) is planned for later milestones and is deliberately *not* in this build.
+## Run it
 
----
-
-## What this milestone includes
-
-- A polished, reading-focused UI (light + dark themes, full keyboard operability, reduced-motion support).
-- A sample conversation with a substantial, multi-paragraph AI answer.
-- Select-to-ask branching anchored to the exact selected text.
-- **Nested branching** (verified to 5+ levels with no hard-coded maximum).
-- Collapse / expand and a **focus view** with breadcrumbs for deep branches.
-- A mock responder that is clearly labeled as a demo answer.
-- **Local persistence** of branches, anchors, and collapse/focus state across restarts.
-- **Anchor validation on load** so a branch can never silently point at the wrong passage.
-- A test suite (domain + component) built test-first around the behavior.
-
-### Explicitly out of scope (per the milestone)
-
-No PDF parsing, no real LLM calls, no voice, no web search, no accounts, no cloud sync, no diagram generation. The architecture leaves clean extension points for these, but adds no speculative infrastructure.
-
----
-
-## Tech stack & key decisions
-
-| Concern | Choice | Why |
-| --- | --- | --- |
-| Language / UI | **TypeScript + React 18** | Mature, types catch anchor/offset mistakes early. |
-| Build / dev | **Vite 5** | Fast, simple, standard. |
-| Tests | **Vitest 2 + Testing Library (jsdom)** | Fast unit + component testing in one runner. |
-| Persistence | **`StorageLike` repository** (localStorage in browser, in-memory in tests) | Decouples the domain from any backend; can migrate to SQLite / Electron `safeStorage` later. |
-| Styling | **Hand-written CSS design tokens** | Full control over the calm, reading-focused aesthetic; no heavy UI dependency. |
-
-### Decision: browser-first instead of Electron (deviation, documented)
-
-The original candidate stack named **Electron**. For *this milestone* I built a **browser-first web app** and kept the entire branching engine in a framework-agnostic `src/domain` layer. Rationale:
-
-- The sandbox is headless; an Electron desktop window cannot be launched or verified here, and Playwright browser binaries cannot be downloaded (their CDNs are not reachable). A browser build is the only variant I can actually run and test end-to-end.
-- The domain logic (model, anchoring, store) has **zero React/DOM imports**, so the exact same UI drops into an Electron `BrowserView` with a preload/IPC shim later — no rewrite. The `StorageLike` interface is the seam where `safeStorage` + SQLite would plug in.
-
-This follows the spec's explicit allowance to recommend a browser-only prototype and document the trade-off. The delivery target can move to Electron in a later milestone without changing the product logic.
-
----
-
-## Getting started
-
-Requirements: **Node 18+** (developed on Node 22).
+Install **Node.js 22.12 or later** (Node 22 LTS recommended), then open a terminal in this folder:
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Run the prototype (local dev server, opens on http://localhost:5173)
+npm ci
 npm run dev
+```
 
-# 3. Build for production (type-check + bundle into dist/)
+Open **http://localhost:5173** in a modern browser. Keep this terminal open; press Ctrl+C to stop. The development server also supports Arena’s live preview. Use the same address each time to keep the same browser workspace.
+
+### Desktop target — Electron
+
+On a machine with a graphical desktop:
+
+```bash
+npm ci
+npm run desktop:install   # one-time free Electron runtime download
+npm run desktop           # builds the UI + shell, then opens Electron
+```
+
+Electron 45 uses an explicit runtime-install command. If the download is blocked by your network, the browser prototype remains available. Linux also needs the normal Electron/Chromium system libraries and a display; do not disable the application sandbox to work around OS setup issues.
+
+The desktop shell loads only the bundled production UI from `branchlight://app/`; it does **not** need a running Vite server. Browser and desktop workspaces are separate. No installer, code signing, auto-update, or deployment has been added.
+
+### Production browser check
+
+```bash
 npm run build
-
-# 4. Preview the production build
 npm run preview
 ```
 
-No API key or network connection is required.
+Open **http://localhost:4173**. Production has a local-only content security policy. Development permits Vite’s local hot-reload connection.
 
----
+## A two-minute demo
 
-## Testing
+1. Read **How vaccines build immune memory**.
+2. Mouse/trackpad-select **A vaccine** inside the explanation. Click **Ask about this**.
+3. The composer retains the exact excerpt. Type **Explain this simply**, then **Add branch** (or Ctrl/⌘+Enter). Cancel/Escape creates nothing.
+4. Find the connected branch beneath its parent answer. The source passage is highlighted; the branch repeats it as a clickable source quote. It is **not a new main-chat message**.
+5. Select **record of invaders** inside that answer and ask **Give me an example**.
+6. Select **virus X** in the new answer and ask **Why does this matter?**.
+7. At the third visible level, choose **Continue in focus view**. The answer gets full reading width with breadcrumbs. Text in focus view is selectable too; keep branching.
+8. **Back to parent context** returns one level; **← Conversation** returns to the explanation and restores its previous scroll position during this session.
+9. **Collapse**, reload, then **Expand**. The questions, answers, anchors, relationships, and collapsed/focused state remain.
+10. Toggle the theme, try a narrow window, or export a JSON copy from the footer. **Reset demo** requires explicit confirmation.
+
+### Keyboard path
+
+- Tab to **Choose a passage** beneath any answer, press Enter, then choose a paragraph.
+- Type a question; Ctrl/⌘+Enter submits. Tab/Shift+Tab stay within the open dialog. Escape cancels and returns focus.
+- For an existing native text selection, **Ctrl/⌘+Shift+B** opens the composer.
+- Focus, collapse, expand, source links, breadcrumbs, help, export, and reset are buttons/links with visible focus styles.
+- The paragraph picker is the pointer-free alternative; arbitrary word-level keyboard selection depends on the browser/OS’s text-selection/caret-browsing support.
+
+## Test it
 
 ```bash
-# Run the full suite once
-npm test
+npm test                  # domain, component, selection and desktop-policy tests
+npm run typecheck         # renderer, desktop, tooling and E2E TypeScript
+npm run lint              # actual ESLint, including hook rules
+npm run format:check
+npm run build
+npm run build:desktop
+npm audit
 
-# Watch mode
-npm run test:watch
-
-# Type-check only
-npm run typecheck
+# Browser E2E, normal workstation setup:
+npx playwright install chromium
+npm run test:e2e          # builds production, starts preview, runs Playwright
 ```
 
-**What is covered automatically (41 tests, all passing):**
-- **Anchoring** — offset building, UTF-16 / emoji handling, anchor validation, corrupted-anchor detection.
-- **Branching engine** — validation of empty/bad/mismatched input, nesting, multiple branches per passage, immutable transitions, serialization round-trips, breadcrumb paths, depth, collapse, focus, and reload validation.
-- **Store** — seeding, persistence to storage, reload from storage, subscriber notification, reset.
-- **Selection offset mapping** — real DOM `TreeWalker`/`Range` logic across nested nodes.
-- **React components** — renders question + answer; renders inline branches with excerpt/question/mock label; collapse hides nested children and reopens; corrupted anchors show a recoverable warning; branches survive a "restart" (new store over same storage); selection toolbar and composer behavior.
+On Linux you may need Playwright’s documented system dependencies (`npx playwright install --with-deps chromium`); installing OS packages may require administrator permission. The test suite uses isolated browser profiles and does not reset your personal workspace.
 
-**What is verified manually (cannot be faithfully automated here):**
-Native text selection (`window.getSelection` + `Range`) is unreliable to simulate in jsdom, so the *end-to-end pointer flow* (mouse-drag a sentence → toolbar appears → type → branch appears) is covered by unit-tested primitives (`getOffsetWithin`, `buildAnchor`, `createBranch`) plus a documented manual walkthrough below. A real browser is required to exercise the native selection itself.
+For this restricted Linux sandbox, where browser CDNs/system packages are unavailable:
 
----
-
-## Manual demo walkthrough (acceptance criteria)
-
-After `npm run dev`:
-
-1. The app launches with no key. ✅
-2. Read the sample answer about vaccine/immune memory. ✅
-3. **Select** a sentence in the answer (e.g. *“When immune cells encounter this material…”*). ✅
-4. Click **“Ask about this”**, type *“Explain this simply”*, and submit. ✅
-5. A branch appears **directly beneath the selected sentence** with the excerpt, your question, and a labeled mock answer. ✅
-6. **Select text inside that answer** and branch again. ✅
-7. Explore **3+ levels**; indentation caps so text never shrinks to nothing; use **Focus** for deep branches. ✅
-8. **Collapse** a branch (its nested children hide) and **Expand** it again. ✅
-9. Use the **Focus** view breadcrumbs to navigate up and **“← Conversation”** to return to the parent. ✅
-10. **Reload the page** — your branches, anchors, and collapse state are still there. ✅
-11. (Trust check) The engine validates anchors on load; a tampered source text surfaces a *“source passage could not be found”* recoverable state rather than attaching to the wrong text. ✅
-12. Resize the window — the layout stays usable; theme toggle works. ✅
-13. Tab/Enter through the composer and controls — everything is keyboard reachable with visible focus rings. ✅
-
----
-
-## Architecture
-
-```
-src/
-  domain/                 # Framework-agnostic core (NO React/DOM imports)
-    types.ts              # Content, SelectionAnchor, Branch, PersistedState
-    ids.ts                # id helper
-    anchoring.ts          # buildAnchor / validateAnchor (UTF-16 offsets)
-    branching.ts          # createBranch, toggleCollapse, setFocus, paths, validation
-    mockAi.ts             # local mock responder (clearly labeled)
-    sampleData.ts         # deterministic seed conversation (FIXED ids)
-    store.ts              # BranchlightStore + StorageLike (localStorage / memory)
-    index.ts
-    __tests__/            # domain + store + (shared) offset tests
-  selection/
-    offset.ts             # DOM (node,offset) -> UTF-16 char offset within root
-    useTextSelection.ts   # centralized native-selection tracker -> SelectionInfo
-  components/
-    AppShell.tsx          # app bar, brand, theme toggle, reset
-    ConversationView.tsx  # the reading column
-    MessageView.tsx       # user + assistant messages
-    BranchView.tsx        # one branch: excerpt, question, answer, children
-    SelectableText.tsx    # renders immutable Content + registers for selection
-    SelectionProvider.tsx # owns live selection, renders overlay, creates branches
-    SelectionOverlay.tsx  # floating toolbar + composer
-    FocusView.tsx         # breadcrumbed full-width branch view
-    Breadcrumbs.tsx
-    __tests__/app.test.tsx
-  context.tsx             # Store / Theme / Selection React contexts + hooks
-  App.tsx
-  main.tsx
-  index.css               # design tokens + component styles (light/dark)
+```bash
+SANDBOX_CHROMIUM=1 npm run test:e2e
 ```
 
-### Domain model (the real invention)
+That optional test path uses the locked `@sparticuz/chromium` npm binary, unpacks its bundled libraries into ignored `.cache/`, and runs headlessly. Its container-specific `--no-sandbox` flag is **test-only**, never used by the Electron application. It requires Linux x65 and `tar`. Generated traces, screenshots, browser libraries and builds are ignored by Git.
 
-- A **`Content`** is any immutable, anchorable piece of text — a message body *or* a branch answer.
-- A **`Branch`** records `parentContentId`, a **`SelectionAnchor`** (`start`/`end` UTF-16 offsets + `exactText` + surrounding context), the user `question`, its own answer `Content`, and `childBranchIds`.
-- The tree is **derived** from parent/child id references, so there is no maximum depth and rendering can change (inline, panel, focus) without touching the data.
-- **Anchoring convention:** offsets are UTF-16 code-unit indices (JS `String.slice` semantics). On every load the anchor is re-checked against the immutable parent text; a mismatch flips `status` to `unavailable` and the UI shows a recoverable warning instead of misattaching.
+**Verified in this session:** 65 unit/component/policy tests and 9 real-browser E2E tests, plus type checking, ESLint, formatting, production UI build and desktop TypeScript build. See [the verification report](docs/VERIFICATION.md) for exact scope, red/green history, acceptance mapping and remaining checks. Automated accessibility checks found no tagged WCAG A/AA violations in the tested reading/composer states in both themes; this is **not** a full accessibility certification.
 
-### Why mock answers are safe
+## What is built
 
-`createBranch` always sets `mock: true` in this milestone, and the UI renders a **“Demo answer · mock”** badge. No code path calls a network or model.
+- A paper-and-pine reading interface: serif explanations, restrained green accents, light/dark tokens, reduced-motion support and responsive layouts.
+- Native text selection, a viewport-constrained contextual toolbar, frozen-draft composer, cancellation and duplicate-submission guards.
+- Persistent UTF-16 anchors, exact-text source highlights, clickable source return and overlapping/multiple branches.
+- Recursive branching without a model depth limit. Two inline levels are rendered; deeper nodes become focus gateways instead of endlessly shrinking text.
+- Full-width focus mode, ancestor breadcrumbs, direct parent return, and per-context in-session scroll restoration.
+- A live exploration outline, keyboard paragraph picker, local JSON export and confirmation-gated reset.
+- Recoverable broken-anchor states; visible persistence errors; corrupt/unknown stored data is protected rather than silently overwritten.
+- A minimal isolated Electron shell, kept separate from the branching domain.
 
----
+## Architecture and decisions
 
-## Extension points (future milestones, not built yet)
+| Concern     | Choice                                | Reason                                                                                                                     |
+| ----------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Domain      | Plain TypeScript                      | Stable anchors and tree transitions can be tested without React or Electron.                                               |
+| UI          | Existing React 18.3.1                 | Preserves the working demo; no major UI-framework migration is needed for this slice.                                      |
+| Tooling     | Vite 8, Vitest 5, TypeScript          | Updated compatible locked versions; the inherited audit findings are resolved. Requires Node 22.12+.                       |
+| Desktop     | Electron 45                           | The originally requested target, with an offline production renderer. Runtime verification is still outstanding.           |
+| Persistence | `StorageLike` + localStorage          | Small single-device prototype, no backend/native SQL dependency. Electron stores it in the persistent application session. |
+| Styling     | CSS tokens and component classes      | Visuals can change independently of domain and selection logic. No UI framework or remotely loaded fonts.                  |
+| Tests       | Testing Library, Playwright, axe-core | Domain invariants, component integration, native browser behavior and automated accessibility checks.                      |
 
-The first milestone is intentionally minimal so the core interaction is proven. The seams are already there:
+The `StorageLike` boundary allows later replacement with a desktop file/SQLite repository. Current saves are synchronous, local, per-origin and **not encrypted**. Browser storage can be removed by the user/browser and has a quota; exports are useful but are not a managed backup service. Exports currently have **no import UI**. On unreadable data, export preserves the original blob for recovery; new temporary work is not written over it. Reset explicitly releases that protection.
 
-- **Real LLM:** add a provider adapter behind `store.createBranch` (one provider first; the adapter pattern keeps others swappable). Keys stay in the user's OS credential store, never in the conversation blob.
-- **Documents (PDF first):** PDF.js for viewing + text extraction; retrieve relevant passages as `Content` and branch from them exactly as from answers.
-- **Voice:** STT → branch context → TTS, sharing the same branch history as text.
-- **Visuals:** React Flow-style structured diagrams whose nodes can themselves become branch anchors.
-- **Search & citations:** an adapter that clearly separates document claims, web results, and model inference.
+### Important source files
 
----
+```text
+src/domain/                 model, immutable transitions, anchor validation, mock responder
+  store.ts                  storage boundary, persistence and recovery protection
+  validation.ts             runtime schema/topology checks for saved data
+src/selection/              native Selection/Range → stable UTF-16 offsets
+src/components/
+  SelectableText.tsx        immutable text + segmented source marks
+  SelectionProvider.tsx     selection → draft → persisted branch
+  SelectionOverlay.tsx      contextual action and composer
+  BranchView.tsx            connected branches and bounded-depth gateways
+  FocusView.tsx             readable deep-context navigation
+  ui/Modal.tsx              focus containment and restoration
+src/context.tsx             store, theme and selection registry
+src/index.css               palette, typography, component states and breakpoints
+src/App.tsx                 view switching and reading-position memory
+desktop/                    Electron process, fixed-origin asset policy and policy tests
+tests/e2e/                  production-build Playwright and axe checks
+docs/                       verification, architecture/security notes and screenshot
+```
 
-## Known limitations
+### Anchoring contract
 
-- **Desktop shell:** shipped as a browser app, not an Electron binary (see decision above). Native GUI/Playwright E2E could not run in the build environment.
-- **Native selection** is verified by primitives + manual run, not by an automated browser test in this environment.
-- **Persistence** uses `localStorage` (per-origin). It is not encrypted; real key storage would move to OS credential storage in a later milestone.
-- **Single conversation / single document** in the demo. Multi-doc workspaces are future scope.
-- Generated mock answers are generic; they exist to make the branching interaction tangible, not to teach immunology.
+A content block has immutable text, a stable ID and a version. Each branch stores its own ID, parent content ID, parent version, inclusive `start` and exclusive `end`, exact selected text, surrounding context, question, answer content, children, timestamps, and collapsed state.
 
----
+Offsets count **JavaScript UTF-16 code units**, not visual glyphs, bytes or Unicode code points. DOM `Range.toString().length` and JS `slice(start, end)` use that same convention. Unicode/emoji tests cover surrogate pairs and accented/non-Latin text. Source marks preserve `textContent` exactly. Overlapping anchors are segmented into a union of highlights, not nested/mutated source strings.
 
-## License
+Every load validates parent identity, version, exact substring and ownership. An invalid anchor disables source navigation and shows **Anchor unavailable**, but keeps the question/answer. Structural corruption (such as cycles, missing child links or an unsupported schema) instead opens a temporary sample session with a warning, leaving the original storage blob untouched.
 
-MIT (provisional). The product name **Branchlight** is provisional; no domain has been purchased and no trademark claim is made.
+This milestone supports plain text, including paragraph-spanning selections **within one content block**. Selections across separate answers or chrome are rejected; crossing answer boundaries explains why. Rich text, documents, editing and regeneration are not implemented. Existing answer text must not be edited without an explicit version/migration strategy.
+
+## Limitations and next step
+
+- **Desktop acceptance is not closed:** native Electron launch/restart, native menus, desktop export, OS zoom/resize, and OS-specific storage paths still need a real desktop check. No signed/package installer was built.
+- Browser tests ran on headless Chromium/Linux, not Safari, Firefox, Windows or macOS. Real trackpad gestures, touch selection, screen readers and high-contrast OS modes still need manual testing.
+- Source-connected branches sit beneath the owning answer, not between individual sentences. Persistent highlights, source quotes and source-return controls provide the connection; rich paragraph-slot rendering is a future layout option.
+- Scroll positions are remembered per context **within the running UI**, not across a process restart; branch/focus/collapse state does persist. Layout changes/collapse can naturally clamp scroll position.
+- Drafts are intentionally not persisted. Responses are synchronous scripted examples; the composer guards submission, but there is no simulated network delay or fabricated streaming state.
+- The prototype has one exploration, no search, document upload, real LLM, API keys, voice, diagrams, notes, accounts, cloud sync or hosted services.
+- Synchronous whole-workspace saves and cloned domain transitions are suitable for this small prototype, not a demonstrated large-data solution. No throughput benchmark is claimed.
+
+**Next small step:** run the documented desktop walkthrough on the founder’s laptop and do a short usability session with students before adding providers. See [architecture/security notes](docs/ARCHITECTURE.md) for future seams; those future capabilities are planned, not built.
+
+## Research and licensing
+
+Official source documentation/licenses were checked through GitHub and npm metadata on 2026-11-26; there was no general unrestricted browsing. References and security assumptions are recorded in [architecture/security notes](docs/ARCHITECTURE.md). React, Vite, Vitest and Electron use MIT licensing; Playwright uses Apache-2.0. Shipping Electron requires retaining its bundled Chromium/third-party notices. No name clearance, domain purchase or trademark claim is made. The repository’s declared MIT license is retained; founder ownership/licensing policy should be confirmed before public product distribution.
