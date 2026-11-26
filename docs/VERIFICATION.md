@@ -1,14 +1,14 @@
 # Verification report
 
-Date: 2026-11-26. Environment: Linux x65 headless sandbox, Node 22.22.3 / npm 10.9.8. This report replaces the inherited README’s unverified manual-check claims.
+Date: 2026-11-26. Environment: Linux x64 headless sandbox, Node 22.22.3 / npm 10.9.8. This report replaces the inherited README’s unverified manual-check claims.
 
 ## Results
 
 | Check                                 | Result                                                                                         |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Initial inherited suite               | 41 tests passed before changes                                                                 |
-| Final `npm test`                      | 65 domain/component/policy tests pass                                                          |
-| `SANDBOX_CHROMIUM=1 npm run test:e2e` | 9 Playwright tests pass on the production build                                                |
+| Final `npm test`                      | 88 domain/component/policy/main-process tests pass                                             |
+| `SANDBOX_CHROMIUM=1 npm run test:e2e` | 16 Playwright tests pass on the production build                                               |
 | `npm run typecheck`                   | Renderer, desktop, configs, test harness and E2E code pass                                     |
 | `npm run lint`                        | ESLint + React hook rules pass                                                                 |
 | `npm run format:check`                | Prettier passes                                                                                |
@@ -40,11 +40,26 @@ This was an extension of an existing demo, not a greenfield app falsely describe
 13. Final keyboard review added a failing context-heading focus test; implemented focus transfer on navigation without scrolling away from the restored reading position.
 14. Formatted/refactored and reran the complete verification commands. Existing render/text assertions were updated to semantic heading queries where the new navigation outline intentionally repeats a question; their behavioral assertions were retained.
 
+## Follow-up hardening pass
+
+After the founder approved continuing, the work stayed on the same tracked branch. No provider, API-key flow, paid service, deployment or speculative future feature was introduced.
+
+- Added protocol tests before the implementation; observed an import failure and two failing new policy tests. Implemented a real local-file handler with explicit MIME types, safe GET/HEAD/error responses, CSP and nosniff. Added binary byte/MIME checks as regression coverage.
+- Added eight tests wiring actual `main.ts` to mocked Electron bindings; initially **five failed**, including an unhandled startup rejection. Implemented single-instance handling, primary-window activation, normal-quit storage flushing and startup/renderer error handling. A ninth test then failed for a thrown storage flush, and a tenth failed for the window close-button path; both quit and window close now stop before removing an active renderer and ask the user to export when flushing throws.
+- Added two failing UI regressions: keyboard-shortcut cancellation returned focus incorrectly, and an unavailable passage had an enabled but ineffective submit control. Both now pass.
+- Added a separate **five-test native Electron suite**, with profile isolation and an offline preflight. Discovery and TypeScript pass. `npm run test:desktop` builds successfully then exits nonzero at preflight because the runtime is missing. **No native test has executed or passed here.** `npm run desktop:install` was retried and still failed under network restrictions; there is also no desktop display.
+- Added browser coverage for true backward/forward multiline drag, emoji/Unicode anchors across reload, compact zoom-equivalent CSS layout, and a deliberately injected browser storage write failure with an intact JSON export. These are regression/coverage additions; not every added coverage test initially failed, since some existing behavior was already correct.
+- Expanded axe checks to branched, focused, narrow and help states in both themes. All tagged checks pass in the tested states; no screen-reader/high-contrast certification is claimed.
+- Current totals: **88 unit/component/protocol/mocked-main tests pass; 16 real-browser tests pass; five native Electron tests remain blocked.** Cross-platform policy test paths were made portable. No Windows/macOS execution is claimed.
+
+Main-process mocks prove listener/response/error wiring, **not** actual Electron behavior. The native setup and result-recording instructions are in [DESKTOP_TESTING.md](DESKTOP_TESTING.md).
+
 ## Real-browser coverage
 
-The nine E2E tests exercise:
+The 16 browser E2E tests exercise:
 
-- Actual pointer dragging over text, native Selection events and the contextual toolbar.
+- Actual pointer dragging over text, including forward/backward multi-paragraph passages, native Selection events and the contextual toolbar.
+- Native Unicode/emoji selection with persisted UTF-16 offsets and source highlights after reload.
 - First, second, third and fourth-level branch creation, including inside focused answers.
 - Source marks, branch ownership within the assistant article, labeled demo answers.
 - Focus gateways, full reading width, parent context and root breadcrumbs.
@@ -56,7 +71,9 @@ The nine E2E tests exercise:
 - Exact scroll-position restoration after entering/exiting focus mode in the tested fixed layout.
 - Multiple/overlapping anchors, native selection shortcut, source return and exported JSON contents.
 - Corrupt saved JSON is not overwritten by dismissing reset; explicit reset replaces it.
-- Automated axe WCAG 2 A/AA + 2.1 AA-tagged checks in light/dark reading and composer states. No tagged violations were reported in those states.
+- Compact 320x400 CSS layout equivalent to a zoomed viewport, without claiming this is an actual native zoom test.
+- An injected browser `Storage.setItem` failure keeps unsaved work usable/exportable; this does not simulate actual disk/quota exhaustion.
+- Automated axe WCAG 2 A/AA + 2.1 AA-tagged checks in light/dark reading, composer, branch, focus, narrow and help states. No tagged violations were reported in those states.
 
 All automated tests run with reduced-motion preference. No generic render-only suite is presented as behavioral coverage.
 
@@ -97,7 +114,7 @@ On a real laptop, record OS/browser/Electron versions and the result, not just a
 - [ ] Use the keyboard-only picker, then macOS Command and Windows/Linux Control shortcuts; check native clipboard, zoom and window resizing.
 - [ ] Export from Electron and check the native download location/dialog. Verify no remote navigation or popup can open.
 - [ ] Test VoiceOver/NVDA, 200% zoom, OS high contrast and actual reduced-motion settings; automated axe tests do not substitute for these.
-- [ ] Check Firefox/Safari text selection and browser storage behavior, especially private mode/quota exhaustion.
+- [ ] Check Firefox/Safari text selection and browser storage behavior, especially private mode/quota exhaustion. Chromium backward/multiline and emoji dragging now have automated coverage; real trackpad gestures remain manual.
 - [ ] Validate save-warning recovery on a real browser quota/permission failure; a throwing storage adapter is covered automatically.
 - [ ] Gather student feedback on whether beneath-answer branches preserve the reading flow before choosing a finer-grained paragraph-slot layout.
 

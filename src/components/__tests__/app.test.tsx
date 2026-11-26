@@ -146,3 +146,18 @@ describe('toolbar placement', () => {
     expect(parseFloat(toolbar.style.top) + 44).toBeLessThanOrEqual(nearBottom.rect.top);
   });
 });
+
+it('does not offer a dead resubmit control for an unavailable passage', () => {
+  render(
+    <BranchComposer
+      selection={fakeSelection}
+      onSubmit={() => {}}
+      onCancel={() => {}}
+      error="This passage is no longer available. Cancel and choose it again."
+    />,
+  );
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Keep my question' } });
+  expect(screen.getByRole('alert')).toContainHTML('This passage is no longer available');
+  expect(screen.getByRole('button', { name: 'Add branch' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+});

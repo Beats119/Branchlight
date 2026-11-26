@@ -9,5 +9,5 @@
     "outDir": "../desktop-dist",
     "types": ["node"]
   },
-  "include": ["main.ts", "security.ts"]
+  "include": ["main.ts", "security.ts", "protocol.ts"]
 }

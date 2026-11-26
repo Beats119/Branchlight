@@ -24,14 +24,17 @@ The shell deliberately exposes **no preload bridge and no IPC**. This milestone 
 
 - `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`, `webviewTag: false`.
 - A registered standard, secure `branchlight://app/` origin provides a stable local-storage origin and loads bundled files only.
-- The protocol handler serves only the root HTML and flat allowlisted asset names/extensions. Decoding/traversal/other origins are rejected. Policy tests cover encoded slash/backslash attacks.
+- The protocol handler serves only the root HTML and flat allowlisted asset names/extensions, using validated filesystem paths and explicit MIME types instead of file-protocol MIME sniffing. GET/HEAD are supported; other methods are rejected. CSP/nosniff headers also cover error responses. Real temporary-filesystem tests cover HTML, JS, CSS, binary bytes, missing files, and encoded slash/backslash attacks.
 - CSP restricts scripts/fonts to self, disables connections, frames, objects, forms and base URL changes. Inline styles are permitted for React’s measured positioning; inline scripts and eval are not.
 - Production browser HTML receives the same CSP through Vite. Development uses Vite’s normal local server/HMR instead.
 - New windows are denied. Main-frame navigation is restricted to the local application. Permission requests/checks are denied.
 - Electron’s regular Edit/View menus keep clipboard and zoom controls available without custom renderer privileges.
-- Runtime errors are not represented as successful saves. A renderer-process termination has a native recovery message.
+- The desktop acquires a single-instance lock scoped to its user-data directory. A second invocation restores/focuses the first window instead of creating another writer.
+- Normal quit and window close request `session.flushStorageData()` before removing an active renderer. If that call throws, quit is prevented and the user is told to export. This is not a promise of transactional storage or power-loss durability.
+- Startup failures are caught and reported rather than leaving a hidden window/unhandled rejection. Unexpected renderer exits show a recovery message; normal quit does not.
+- Native E2E can choose a separate absolute profile only when both `BRANCHLIGHT_E2E=1` and `BRANCHLIGHT_TEST_USER_DATA_DIR` are explicitly set in an **unpackaged** run. Packaged apps ignore the override. No renderer API exposes environment variables or test hooks; the native runner checks the effective path before making any UI writes.
 
-**Unverified assumptions:** Electron’s custom-protocol/localStorage behavior, native download dialog for blob exports, menus, native packaging and restart behavior need real Electron execution. This environment could compile the shell and test the pure policy, but could not download the runtime or open a GUI. Do not regard those tests as a security audit. Keep Electron current; inspect upstream advisories and third-party notices before distributing. Do not ship the test harness’s container `--no-sandbox` option.
+**Unverified assumptions:** Electron’s custom-protocol/localStorage behavior, native download dialog for blob exports, menus, native packaging and restart behavior need real Electron execution. This environment compiled the shell, tested actual local-file responses and exercised main-process wiring with mocked Electron bindings, but could not download the runtime or open a GUI. The separate five-test native suite is discoverable/type-checked, not runtime-verified. Do not regard those tests as a security audit. Keep Electron current; inspect upstream advisories and third-party notices before distributing. Do not ship the test harness’s container `--no-sandbox` option.
 
 ## Planned evolution — not implemented
 
@@ -52,6 +55,7 @@ No generic plugin registry, server, ORM, vector database, provider SDK or attach
 Access was restricted to GitHub/npm/package registries. These official source files or npm package metadata were actually retrieved, not inferred from inaccessible websites:
 
 - [Electron security guidance](https://github.com/electron/electron/blob/main/docs/tutorial/security.md): current framework, sandboxing/isolation, restricted navigation, minimal privileges, trusted local content.
+- [Electron app API](https://github.com/electron/electron/blob/main/docs/api/app.md) and [session API](https://github.com/electron/electron/blob/main/docs/api/session.md): single-instance/user-data behavior and DOM-storage flushing were checked during the hardening pass.
 - [Electron npm package](https://www.npmjs.com/package/electron): version 45.5.0, MIT, Node >=22.12.0, explicit `install-electron` command in the installed package.
 - [Vite getting started](https://github.com/vitejs/vite/blob/main/docs/guide/index.md) and [MIT license](https://github.com/vitejs/vite/blob/main/LICENSE); npm engine metadata checked against this environment.
 - [React MIT license](https://github.com/facebook/react/blob/main/LICENSE). Existing React 18 was retained rather than unnecessarily migrating the application runtime.

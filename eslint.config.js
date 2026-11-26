@@ -32,4 +32,9 @@ export default tseslint.config(
     plugins: { 'react-hooks': hooks },
     rules: { 'react-hooks/rules-of-hooks': 'error', 'react-hooks/exhaustive-deps': 'error' },
   },
+  {
+    // Playwright requires fixture destructuring even when Electron tests use no browser fixture.
+    files: ['tests/desktop/**/*.spec.ts'],
+    rules: { 'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }] },
+  },
 );

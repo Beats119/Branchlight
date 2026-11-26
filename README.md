@@ -8,7 +8,7 @@ An answer is a starting point, not the end of a conversation. **Select a passage
 
 ## Status — milestone 1, local mock prototype
 
-The **browser interaction is implemented and tested**. An Electron desktop shell is included and type-checked, with unit-tested security configuration and asset routing. **Native Electron launch/restart is not verified in this environment**: its runtime download is blocked, and the Linux sandbox has no desktop display. This is not a signed installer or a production release, and the full desktop acceptance gate remains open.
+The **browser interaction is implemented and tested**. An Electron desktop shell is included and type-checked, with tested security policy, actual local-file responses, and mocked main-process lifecycle checks. **Native Electron launch/restart is not verified in this environment**: its runtime download is blocked, and the Linux sandbox has no desktop display. This is not a signed installer or a production release, and the full desktop acceptance gate remains open.
 
 No API key, account, GPU, database server, or paid service is required. Installation downloads free dependencies; normal use after installation is local. All answers are **scripted mock content**, not live AI or medical advice.
 
@@ -35,7 +35,16 @@ npm run desktop           # builds the UI + shell, then opens Electron
 
 Electron 45 uses an explicit runtime-install command. If the download is blocked by your network, the browser prototype remains available. Linux also needs the normal Electron/Chromium system libraries and a display; do not disable the application sandbox to work around OS setup issues.
 
-The desktop shell loads only the bundled production UI from `branchlight://app/`; it does **not** need a running Vite server. Browser and desktop workspaces are separate. No installer, code signing, auto-update, or deployment has been added.
+A native test harness is now included, separate from the browser suite:
+
+```bash
+npm run test:desktop:list  # discover the five tests without a binary or display
+npm run test:desktop       # build and execute against the real Electron runtime
+```
+
+Native tests cover launch, recursive branching/restart, navigation restrictions, JSON export, and native resize/200% zoom. They use isolated profiles and refuse to modify the normal workspace. **These five tests are not yet run here**: the preflight reports the missing runtime rather than silently skipping tests. For setup, limits and a result template, see [desktop verification](docs/DESKTOP_TESTING.md).
+
+The desktop shell loads only the bundled production UI from `branchlight://app/`; it does **not** need a running Vite server. A single-instance lock prevents parallel desktop windows from racing over the same workspace; normal quit requests a DOM-storage flush, and a thrown flush error keeps the window open with an export warning. Browser and desktop workspaces are separate. No installer, code signing, auto-update, or deployment has been added.
 
 ### Production browser check
 
@@ -91,9 +100,9 @@ For this restricted Linux sandbox, where browser CDNs/system packages are unavai
 SANDBOX_CHROMIUM=1 npm run test:e2e
 ```
 
-That optional test path uses the locked `@sparticuz/chromium` npm binary, unpacks its bundled libraries into ignored `.cache/`, and runs headlessly. Its container-specific `--no-sandbox` flag is **test-only**, never used by the Electron application. It requires Linux x65 and `tar`. Generated traces, screenshots, browser libraries and builds are ignored by Git.
+That optional test path uses the locked `@sparticuz/chromium` npm binary, unpacks its bundled libraries into ignored `.cache/`, and runs headlessly. Its container-specific `--no-sandbox` flag is **test-only**, never used by the Electron application. It requires Linux x64 and `tar`. Generated traces, screenshots, browser libraries and builds are ignored by Git.
 
-**Verified in this session:** 65 unit/component/policy tests and 9 real-browser E2E tests, plus type checking, ESLint, formatting, production UI build and desktop TypeScript build. See [the verification report](docs/VERIFICATION.md) for exact scope, red/green history, acceptance mapping and remaining checks. Automated accessibility checks found no tagged WCAG A/AA violations in the tested reading/composer states in both themes; this is **not** a full accessibility certification.
+**Verified in this session:** 88 unit/component/main-process tests and 16 real-browser E2E tests, plus type checking, ESLint, formatting, production UI build and desktop TypeScript build. See [the verification report](docs/VERIFICATION.md) for exact scope, red/green history, acceptance mapping and remaining checks. Automated accessibility checks found no tagged WCAG A/AA violations in the tested reading, composer, branch, focus, narrow and help states in both themes; this is **not** a full accessibility certification.
 
 ## What is built
 
@@ -137,8 +146,9 @@ src/components/
 src/context.tsx             store, theme and selection registry
 src/index.css               palette, typography, component states and breakpoints
 src/App.tsx                 view switching and reading-position memory
-desktop/                    Electron process, fixed-origin asset policy and policy tests
+desktop/                    Electron lifecycle, tested local protocol and mocked OS-binding tests
 tests/e2e/                  production-build Playwright and axe checks
+tests/desktop/              separate native Electron suite and offline preflight
 docs/                       verification, architecture/security notes and screenshot
 ```
 
